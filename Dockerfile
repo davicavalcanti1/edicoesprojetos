@@ -13,6 +13,7 @@ ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY
 
 RUN npm run build
+RUN ls -la /app/dist || echo "dist directory missing!"
 
 # 2) Servir com Nginx
 FROM nginx:alpine
