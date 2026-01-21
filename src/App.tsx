@@ -34,6 +34,10 @@ import AdminKanban from "./pages/AdminKanban";
 import NursingSubtypeSelection from "./pages/nursing-occurrence/NursingSubtypeSelection";
 import Instructions from "./pages/Instructions";
 import PublicImageGallery from "./pages/PublicImageGallery";
+import DispenserForm from "./pages/qr-forms/DispenserForm";
+import BanheiroForm from "./pages/qr-forms/BanheiroForm";
+import BanheiroRaloForm from "./pages/qr-forms/BanheiroRaloForm";
+import ArCondicionadoForm from "./pages/qr-forms/ArCondicionadoForm";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +53,13 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/paciente" element={<PublicPatientOccurrence />} />
+
+            {/* QR Code Forms (Public) */}
+            <Route path="/formularios/dispenser/abrir" element={<DispenserForm />} />
+            <Route path="/formularios/banheiro/abrir" element={<BanheiroForm />} />
+            <Route path="/formularios/banheiro/limpeza-ralo" element={<BanheiroRaloForm />} />
+            <Route path="/formularios/ar-condicionado/abrir" element={<ArCondicionadoForm />} />
+
 
             {/* Protected routes - all users */}
             <Route path="/" element={
