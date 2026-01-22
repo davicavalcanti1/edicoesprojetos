@@ -81,7 +81,7 @@ export default function BanheiroRaloForm() {
                 source: "site_banheiro_limpeza_ralo"
             };
 
-            await fetch("https://n8n.imagoradiologia.cloud/webhook/Tickets", {
+            await fetch("https://n8n.imagoradiologia.cloud/webhook/Banheiro", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(n8nPayload)

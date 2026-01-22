@@ -111,7 +111,7 @@ export default function FinalizarBanheiro() {
             };
 
             // Enviar webhook
-            await fetch("https://n8n.imagoradiologia.cloud/webhook/Tickets", {
+            await fetch("https://n8n.imagoradiologia.cloud/webhook/Banheiro", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(n8nPayload)
