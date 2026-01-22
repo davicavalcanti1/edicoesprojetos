@@ -45,6 +45,8 @@ import ServicosTerceirizadosForm from "./pages/qr-forms/ServicosTerceirizadosFor
 import ArImagoForm from "./pages/qr-forms/ar-condicionado/ArImagoForm";
 import ArTerceirizadoForm from "./pages/qr-forms/ar-condicionado/ArTerceirizadoForm";
 import ArDrenoForm from "./pages/qr-forms/ar-condicionado/ArDrenoForm";
+import DashboardChamados from "@/pages/dashboard/DashboardChamados";
+import RelatoriosChamados from "@/pages/relatorios/RelatoriosChamados";
 import Migrations from "./pages/Migrations";
 
 
@@ -192,6 +194,18 @@ const App = () => (
             <Route path="/configuracoes" element={
               <ProtectedRoute requireAdmin>
                 <Configuracoes />
+              </ProtectedRoute>
+            } />
+
+            {/* Dashboard e Relatórios Operacionais */}
+            <Route path="/dashboard/chamados" element={
+              <ProtectedRoute allowedRoles={['admin', 'estoque']}>
+                <DashboardChamados />
+              </ProtectedRoute>
+            } />
+            <Route path="/relatorios/chamados" element={
+              <ProtectedRoute allowedRoles={['admin', 'estoque']}>
+                <RelatoriosChamados />
               </ProtectedRoute>
             } />
 

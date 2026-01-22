@@ -30,7 +30,8 @@ const formSchema = z.object({
 
 export default function FinalizarDispenser() {
     const [searchParams] = useSearchParams();
-    const protocolo = searchParams.get("protocolo");
+    const rawProtocolo = searchParams.get("protocolo");
+    const protocolo = rawProtocolo?.trim();
 
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
@@ -58,10 +59,11 @@ export default function FinalizarDispenser() {
 
     const loadOccurrence = async () => {
         try {
+            if (!protocolo) return;
             const { data, error } = await supabase
                 .from("occurrences")
                 .select("*")
-                .eq("protocolo", protocolo)
+                .ilike("protocolo", protocolo)
                 .eq("protocolo", protocolo)
                 .maybeSingle();
 
