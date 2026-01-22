@@ -242,6 +242,7 @@ export default function Analise() {
                     <SelectItem value="assistencial">Assistencial</SelectItem>
                     <SelectItem value="administrativa">Administrativa</SelectItem>
                     <SelectItem value="tecnica">Técnica</SelectItem>
+                    <SelectItem value="revisao_exame">Revisão de Exame</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -382,9 +383,8 @@ export default function Analise() {
                     </TableCell>
                     <TableCell>
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${
-                          statusConfig[occ.status as OccurrenceStatus].bgColor
-                        } ${statusConfig[occ.status as OccurrenceStatus].color}`}
+                        className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${statusConfig[occ.status as OccurrenceStatus].bgColor
+                          } ${statusConfig[occ.status as OccurrenceStatus].color}`}
                       >
                         {statusConfig[occ.status as OccurrenceStatus].label}
                       </span>

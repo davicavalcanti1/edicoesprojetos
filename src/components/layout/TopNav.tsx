@@ -44,8 +44,9 @@ export function TopNav() {
     { href: "/ocorrencias", label: "Ocorrências", icon: FileText, adminOnly: false },
     { href: "/kanbans", label: "Kanbans", icon: Columns3, adminOnly: false },
     { href: "/analise", label: "Análise", icon: SlidersHorizontal, adminOnly: true },
-    // Novo item Inspeções (Agrupa Dashboard e Relatórios de Chamados)
-    { href: "/inspecoes", label: "Inspeções", icon: BarChart3, adminOnly: false, allowedRoles: ['admin', 'estoque'] },
+    { href: "/relatorios", label: "Dashboard", icon: BarChart3, adminOnly: false },
+    // Novo item Inspeções (Agrupa Dashboard e Relatórios de Chamados Operacionais)
+    { href: "/inspecoes", label: "Inspeções", icon: Package, adminOnly: false, allowedRoles: ['admin', 'estoque'] },
     { href: "/livro", label: "Livro", icon: BookOpen, adminOnly: false },
 
   ].filter(link => {
