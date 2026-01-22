@@ -5,26 +5,18 @@ import * as z from "zod";
 import { Loader2, Send, CheckCircle2, AlertTriangle } from "lucide-react";
 import { SimpleLayout } from "@/components/layout/SimpleLayout";
 import { useQueryParams } from "@/hooks/useQueryParams";
-import { sendQrForm } from "@/lib/qr-webhook";
 import { Button } from "@/components/ui/button";
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+    Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { generateSecureProtocol } from "@/lib/form-utils";
 
 const formSchema = z.object({
     problema: z.string().min(1, "Selecione o problema"),
@@ -37,8 +29,8 @@ export default function BanheiroForm() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [isValidQr, setIsValidQr] = useState(true);
+    const [protocol, setProtocol] = useState<string>("");
 
-    // Validate QR params on mount
     useEffect(() => {
         if (!params.id || !params.localizacao) {
             setIsValidQr(false);
@@ -56,27 +48,61 @@ export default function BanheiroForm() {
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true);
         try {
-            const payload = {
-                tipo: "banheiro" as const,
-                id_qrcode: params.id || 0,
-                localizacao: params.localizacao || "Local Desconhecido",
-                dados_usuario: values,
-                timestamp: new Date().toISOString(),
-                metadata: { ...params }
+            // 1. Gerar Protocolo
+            const protocolNum = await generateSecureProtocol();
+            setProtocol(protocolNum);
+
+            // 2. Tenant
+            const { data: tenant } = await supabase.from('tenants').select('id').limit(1).single();
+            const tenantId = tenant?.id;
+
+            if (!tenantId) throw new Error("Erro configuração tenant");
+
+            // 3. Salvar no Supabase
+            const { error } = await supabase.from("occurrences").insert({
+                protocolo: protocolNum,
+                tipo: "tecnica",
+                subtipo: "predial",
+                status: "registrada",
+                tenant_id: tenantId,
+                descricao_detalhada: `[Banheiro] ${params.localizacao} - ${values.problema}\n${values.descricao}`,
+                dados_especificos: {
+                    tipo: "banheiro",
+                    localizacao: params.localizacao,
+                    problema: values.problema,
+                    descricao: values.descricao
+                },
+                criado_em: new Date().toISOString(),
+                atualizado_em: new Date().toISOString()
+            });
+
+            if (error) throw error;
+
+            // 4. Webhook N8N (Flat Payload)
+            const n8nPayload = {
+                event_type: "abrir",
+                protocol: protocolNum,
+                banheiro_localizacao: params.localizacao,
+                banheiro_problema: values.problema,
+                banheiro_descricao: values.descricao,
+                submitted_at: new Date().toISOString(),
+                source: "site_banheiro_abrir"
             };
 
-            const success = await sendQrForm(payload);
+            await fetch("https://n8n.imagoradiologia.cloud/webhook/Tickets", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(n8nPayload)
+            }).catch(console.error);
 
-            if (success) {
-                setIsSuccess(true);
-                toast({
-                    title: "Chamado aberto!",
-                    description: "Equipe de limpeza notificada.",
-                });
-            } else {
-                throw new Error("Falha no envio");
-            }
+            setIsSuccess(true);
+            toast({
+                title: "Chamado aberto!",
+                description: `Protocolo: ${protocolNum}`,
+            });
+
         } catch (error) {
+            console.error(error);
             toast({
                 title: "Erro",
                 description: "Não foi possível enviar o chamado. Tente novamente.",
@@ -107,7 +133,8 @@ export default function BanheiroForm() {
                         <CheckCircle2 className="h-12 w-12 text-green-600" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold text-green-700">Obrigado!</h2>
+                        <h2 className="text-2xl font-bold text-green-700">Chamado Aberto!</h2>
+                        <p className="text-lg font-mono font-bold mt-2 text-primary">{protocol}</p>
                         <p className="text-muted-foreground mt-2">
                             Problema em <strong>{params.localizacao}</strong> reportado.
                         </p>

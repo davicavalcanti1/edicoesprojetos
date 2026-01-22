@@ -38,6 +38,15 @@ import DispenserForm from "./pages/qr-forms/DispenserForm";
 import BanheiroForm from "./pages/qr-forms/BanheiroForm";
 import BanheiroRaloForm from "./pages/qr-forms/BanheiroRaloForm";
 import ArCondicionadoForm from "./pages/qr-forms/ArCondicionadoForm";
+import FinalizarChamado from "./pages/qr-forms/FinalizarChamado";
+import FinalizarDispenser from "./pages/qr-forms/FinalizarDispenser";
+import FinalizarBanheiro from "./pages/qr-forms/FinalizarBanheiro";
+import ServicosTerceirizadosForm from "./pages/qr-forms/ServicosTerceirizadosForm";
+import ArImagoForm from "./pages/qr-forms/ar-condicionado/ArImagoForm";
+import ArTerceirizadoForm from "./pages/qr-forms/ar-condicionado/ArTerceirizadoForm";
+import ArDrenoForm from "./pages/qr-forms/ar-condicionado/ArDrenoForm";
+import Migrations from "./pages/Migrations";
+
 
 const queryClient = new QueryClient();
 
@@ -54,11 +63,24 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/paciente" element={<PublicPatientOccurrence />} />
 
+
             {/* QR Code Forms (Public) */}
             <Route path="/formularios/dispenser/abrir" element={<DispenserForm />} />
             <Route path="/formularios/banheiro/abrir" element={<BanheiroForm />} />
             <Route path="/formularios/banheiro/limpeza-ralo" element={<BanheiroRaloForm />} />
+            <Route path="/formularios/ar-condicionado/imago" element={<ArImagoForm />} />
+            <Route path="/formularios/ar-condicionado/terceirizado" element={<ArTerceirizadoForm />} />
+            <Route path="/formularios/ar-condicionado/dreno" element={<ArDrenoForm />} />
+            {/* Rota antiga mantida por compatibilidade ou removida se desejar */}
             <Route path="/formularios/ar-condicionado/abrir" element={<ArCondicionadoForm />} />
+            <Route path="/formularios/servicos-terceirizados/registrar" element={<ServicosTerceirizadosForm />} />
+
+            {/* Finalização de Chamados (Public) */}
+            <Route path="/finalizar/:protocolo" element={<FinalizarChamado />} />
+            <Route path="/formularios/dispenser/finalizar" element={<FinalizarDispenser />} />
+            <Route path="/formularios/banheiro/finalizar" element={<FinalizarBanheiro />} />
+
+
 
 
             {/* Protected routes - all users */}
@@ -185,8 +207,15 @@ const App = () => (
             <Route path="/public/imagens/:token" element={<PublicImageGallery />} />
             <Route path="/instrucoes" element={<Instructions />} />
 
+            <Route path="/migrations" element={
+              <ProtectedRoute requireAdmin>
+                <Migrations />
+              </ProtectedRoute>
+            } />
+
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
+
           </Routes>
         </AuthProvider>
       </BrowserRouter>

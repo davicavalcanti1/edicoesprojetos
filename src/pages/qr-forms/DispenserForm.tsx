@@ -5,27 +5,18 @@ import * as z from "zod";
 import { Loader2, Send, CheckCircle2, AlertTriangle } from "lucide-react";
 import { SimpleLayout } from "@/components/layout/SimpleLayout";
 import { useQueryParams } from "@/hooks/useQueryParams";
-import { sendQrForm } from "@/lib/qr-webhook";
 import { Button } from "@/components/ui/button";
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+    Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { generateSecureProtocol } from "@/lib/form-utils";
 
 const formSchema = z.object({
     situacao: z.string().min(1, "Selecione a situação"),
@@ -38,8 +29,8 @@ export default function DispenserForm() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [isValidQr, setIsValidQr] = useState(true);
+    const [protocol, setProtocol] = useState<string>("");
 
-    // Validate QR params on mount
     useEffect(() => {
         if (!params.id || !params.localizacao) {
             setIsValidQr(false);
@@ -57,27 +48,64 @@ export default function DispenserForm() {
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true);
         try {
-            const payload = {
-                tipo: "dispenser" as const,
-                id_qrcode: params.id || 0,
-                localizacao: params.localizacao || "Local Desconhecido",
-                dados_usuario: values,
-                timestamp: new Date().toISOString(),
-                metadata: { ...params }
+            // 1. Gerar Protocolo
+            const protocolNum = await generateSecureProtocol();
+            setProtocol(protocolNum);
+
+            // 2. Obter Tenant/User (opcional para publico, mas bom ter referência se possível)
+            // Aqui simplificado: usamos profile se logado, ou tenant hardcoded/busca dinâmica.
+            // Para "abrir chamado" público, geralmente não tem user logado.
+            // A gravação em `occurrences` requer `tenant_id`. Buscamos um default ou o primeiro.
+            const { data: tenant } = await supabase.from('tenants').select('id').limit(1).single();
+            const tenantId = tenant?.id;
+
+            if (!tenantId) throw new Error("Erro configuração tenant");
+
+            // 3. Salvar no Supabase (Tickets/Occurrences)
+            const { error } = await supabase.from("occurrences").insert({
+                protocolo: protocolNum,
+                tipo: "tecnica",
+                subtipo: "predial",
+                status: "registrada",
+                tenant_id: tenantId,
+                descricao_detalhada: `[Dispenser] ${params.localizacao} - ${values.situacao}\n${values.descricao || ''}`,
+                dados_especificos: {
+                    tipo: "dispenser",
+                    localizacao: params.localizacao,
+                    problema: values.situacao,
+                    marca: params.marca
+                },
+                criado_em: new Date().toISOString(),
+                atualizado_em: new Date().toISOString()
+            });
+
+            if (error) throw error;
+
+            // 4. Webhook N8N (Flat Payload)
+            const n8nPayload = {
+                event_type: "abrir",
+                protocol: protocolNum,
+                dispenser_localizacao: params.localizacao,
+                dispenser_status: values.situacao,
+                dispenser_descricao: values.descricao || "",
+                submitted_at: new Date().toISOString(),
+                source: "site_dispenser_abrir"
             };
 
-            const success = await sendQrForm(payload);
+            await fetch("https://n8n.imagoradiologia.cloud/webhook/Tickets", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(n8nPayload)
+            }).catch(console.error);
 
-            if (success) {
-                setIsSuccess(true);
-                toast({
-                    title: "Chamado aberto!",
-                    description: "Sua solicitação foi enviada com sucesso.",
-                });
-            } else {
-                throw new Error("Falha no envio");
-            }
+            setIsSuccess(true);
+            toast({
+                title: "Chamado aberto!",
+                description: `Protocolo: ${protocolNum}`,
+            });
+
         } catch (error) {
+            console.error(error);
             toast({
                 title: "Erro",
                 description: "Não foi possível enviar o chamado. Tente novamente.",
@@ -94,7 +122,7 @@ export default function DispenserForm() {
                 <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
                     <AlertTriangle className="h-16 w-16 text-destructive" />
                     <h2 className="text-xl font-bold">QR Code Inválido</h2>
-                    <p className="text-muted-foreground">Não foi possível identificar as informações do local. Tente escanear novamente.</p>
+                    <p className="text-muted-foreground">Não foi possível identificar o local.</p>
                 </div>
             </SimpleLayout>
         );
@@ -108,13 +136,11 @@ export default function DispenserForm() {
                         <CheckCircle2 className="h-12 w-12 text-green-600" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold text-green-700">Obrigado!</h2>
+                        <h2 className="text-2xl font-bold text-green-700">Chamado Aberto!</h2>
+                        <p className="text-lg font-mono font-bold mt-2 text-primary">{protocol}</p>
                         <p className="text-muted-foreground mt-2">
                             O chamado para <strong>{params.localizacao}</strong> foi registrado.
                         </p>
-                        {params.marca && (
-                            <p className="text-sm text-muted-foreground mt-1">Marca: {params.marca}</p>
-                        )}
                     </div>
                     <Button onClick={() => window.close()} variant="outline" className="mt-8">
                         Fechar Janela

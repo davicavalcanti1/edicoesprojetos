@@ -3,20 +3,33 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Save, CheckCircle2, AlertTriangle, FileCheck } from "lucide-react";
+import { Loader2, Save, AlertTriangle, FileCheck } from "lucide-react";
 import { SimpleLayout } from "@/components/layout/SimpleLayout";
 import { useQueryParams } from "@/hooks/useQueryParams";
+import { sendQrForm } from "@/lib/qr-webhook";
 import { Button } from "@/components/ui/button";
 import {
-    Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
+    tipo_servico: z.string().min(1, "Selecione o tipo de serviço"),
     nome_prestador: z.string().min(3, "Nome do prestador obrigatório"),
     data_manutencao: z.string().min(1, "Data obrigatória"),
     descricao_servico: z.string().min(3, "Descrição obrigatória"),
@@ -24,7 +37,7 @@ const formSchema = z.object({
     observacoes: z.string().optional(),
 });
 
-export default function BanheiroRaloForm() {
+export default function ServicosTerceirizadosForm() {
     const params = useQueryParams();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,7 +47,7 @@ export default function BanheiroRaloForm() {
     const today = new Date().toISOString().split('T')[0];
 
     useEffect(() => {
-        if (!params.id || !params.localizacao) {
+        if (!params.id) {
             setIsValidQr(false);
         }
     }, [params]);
@@ -42,9 +55,10 @@ export default function BanheiroRaloForm() {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
+            tipo_servico: "",
             nome_prestador: "",
             data_manutencao: today,
-            descricao_servico: "Limpeza de ralo e sifão",
+            descricao_servico: "",
             custo: "",
             observacoes: "",
         },
@@ -53,48 +67,29 @@ export default function BanheiroRaloForm() {
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true);
         try {
-            // 1. Salvar no Supabase (maintenance_records)
-            const { error } = await supabase.from("maintenance_records").insert({
-                tipo_origem: "banheiro_ralo",
-                subtipo: "terceirizado",
+            // Este tipo 'servico_terceirizado' não tem webhook configurado em sendQrForm, 
+            // então não enviará WhatsApp nem chamará o N8N, apenas salvará no Supabase.
+            const payload = {
+                tipo: "servico_terceirizado" as const,
+                id_qrcode: params.id || 0,
                 localizacao: params.localizacao || "Local Desconhecido",
-                responsavel: values.nome_prestador,
-                data_manutencao: values.data_manutencao,
-                descricao: values.descricao_servico,
-                custo: values.custo ? parseFloat(values.custo.replace(',', '.')) : null,
-                observacoes: values.observacoes
-            });
-
-            if (error) throw error;
-
-            // 2. Webhook N8N (formato flat solicitado)
-            const n8nPayload = {
-                event_type: "registrar_servico",
-                tipo: "limpeza_ralo",
-                localizacao: params.localizacao,
-                nome_encanador: values.nome_prestador,
-                dia_manutencao: values.data_manutencao,
-                descricao: values.descricao_servico,
-                custo: values.custo,
-                observacoes: values.observacoes,
-                submitted_at: new Date().toISOString(),
-                source: "site_banheiro_limpeza_ralo"
+                dados_usuario: values,
+                timestamp: new Date().toISOString(),
+                metadata: { ...params }
             };
 
-            await fetch("https://n8n.imagoradiologia.cloud/webhook/Tickets", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(n8nPayload)
-            }).catch(console.error);
+            const success = await sendQrForm(payload);
 
-            setIsSuccess(true);
-            toast({
-                title: "Serviço Registrado!",
-                description: "O registro de limpeza foi salvo com sucesso.",
-            });
-
+            if (success) {
+                setIsSuccess(true);
+                toast({
+                    title: "Serviço Registrado!",
+                    description: "O registro foi salvo com sucesso.",
+                });
+            } else {
+                throw new Error("Falha no envio");
+            }
         } catch (error) {
-            console.error(error);
             toast({
                 title: "Erro",
                 description: "Não foi possível salvar o registro. Tente novamente.",
@@ -127,7 +122,7 @@ export default function BanheiroRaloForm() {
                     <div>
                         <h2 className="text-2xl font-bold text-green-700">Registrado!</h2>
                         <p className="text-muted-foreground mt-2">
-                            A execução do serviço em <strong>{params.localizacao}</strong> foi salva.
+                            Serviço em <strong>{params.localizacao}</strong> foi salvo.
                         </p>
                     </div>
                     <Button onClick={() => window.close()} variant="outline" className="mt-8">
@@ -139,12 +134,12 @@ export default function BanheiroRaloForm() {
     }
 
     return (
-        <SimpleLayout title="Registro de Limpeza de Ralo" subtitle={params.localizacao}>
+        <SimpleLayout title="Serviços Terceirizados" subtitle={params.localizacao}>
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
                 <CardContent className="pt-6">
                     <div className="mb-6 p-4 rounded-lg bg-secondary/50 border border-secondary text-sm">
                         <p className="font-semibold text-foreground/80">Local do Serviço:</p>
-                        <p className="text-lg font-bold text-primary">{params.localizacao}</p>
+                        <p className="text-lg font-bold text-primary">{params.localizacao || "Local não identificado"}</p>
                     </div>
 
                     <Form {...form}>
@@ -152,12 +147,39 @@ export default function BanheiroRaloForm() {
 
                             <FormField
                                 control={form.control}
+                                name="tipo_servico"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Tipo de Serviço *</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger className="h-12">
+                                                    <SelectValue placeholder="Selecione..." />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="Desentupidora">Desentupidora</SelectItem>
+                                                <SelectItem value="Troca de Vaso/Pia">Troca de Vaso/Pia</SelectItem>
+                                                <SelectItem value="Dedetização">Dedetização</SelectItem>
+                                                <SelectItem value="Hidráulica">Hidráulica</SelectItem>
+                                                <SelectItem value="Elétrica">Elétrica</SelectItem>
+                                                <SelectItem value="Refrigeração">Refrigeração</SelectItem>
+                                                <SelectItem value="Outro">Outro</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
                                 name="nome_prestador"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Nome do Encanador/Empresa *</FormLabel>
+                                        <FormLabel>Empresa / Técnico *</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="Nome do técnico/empresa" {...field} />
+                                            <Input placeholder="Nome do técnico ou empresa" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -199,10 +221,10 @@ export default function BanheiroRaloForm() {
                                 name="descricao_servico"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Descrição da Manutenção *</FormLabel>
+                                        <FormLabel>Descrição *</FormLabel>
                                         <FormControl>
                                             <Textarea
-                                                placeholder="Descreva o que foi realizado..."
+                                                placeholder="Descreva o serviço realizado..."
                                                 className="resize-none"
                                                 {...field}
                                             />
