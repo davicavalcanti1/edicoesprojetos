@@ -53,7 +53,7 @@ export default function BanheiroForm() {
             setProtocol(protocolNum);
 
             // 2. Tenant
-            const { data: tenant } = await supabase.from('tenants').select('id').limit(1).single();
+            const { data: tenant } = await supabase.from('tenants').select('id').limit(1).maybeSingle();
             const tenantId = tenant?.id;
 
             if (!tenantId) throw new Error("Erro configuração tenant");

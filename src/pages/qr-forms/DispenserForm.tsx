@@ -56,7 +56,7 @@ export default function DispenserForm() {
             // Aqui simplificado: usamos profile se logado, ou tenant hardcoded/busca dinâmica.
             // Para "abrir chamado" público, geralmente não tem user logado.
             // A gravação em `occurrences` requer `tenant_id`. Buscamos um default ou o primeiro.
-            const { data: tenant } = await supabase.from('tenants').select('id').limit(1).single();
+            const { data: tenant } = await supabase.from('tenants').select('id').limit(1).maybeSingle();
             const tenantId = tenant?.id;
 
             if (!tenantId) throw new Error("Erro configuração tenant");

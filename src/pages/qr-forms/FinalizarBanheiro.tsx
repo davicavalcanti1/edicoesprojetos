@@ -62,10 +62,14 @@ export default function FinalizarBanheiro() {
                 .from("occurrences")
                 .select("*")
                 .eq("protocolo", protocolo)
-                .single();
+                .eq("protocolo", protocolo)
+                .maybeSingle();
 
             if (error) throw error;
-            if (!data) throw new Error("Chamado não encontrado.");
+            if (!data) {
+                setError("Chamado não encontrado ou protocolo inválido.");
+                return;
+            }
 
             if (data.status === "concluida") {
                 setError("Este chamado já foi finalizado anteriormente.");
