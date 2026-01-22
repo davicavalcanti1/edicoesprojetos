@@ -81,13 +81,24 @@ export default function DispenserForm() {
 
             if (error) throw error;
 
-            // 4. Webhook N8N (Flat Payload)
+            // 4. Webhook N8N
+            const linkFinalizar = `https://teste.imagoradiologia.cloud/formularios/dispenser/finalizar?protocolo=${protocolNum}`;
+            const gpMessage = `*CHAMADO ABERTO (DISPENSER DE ÁLCOOL)*
+Protocolo: ${protocolNum}
+Local: ${params.localizacao}
+Status: ${values.situacao}
+Descrição: ${values.descricao || '-'}
+
+Clique no link para finalizar o chamado:
+${linkFinalizar}`;
+
             const n8nPayload = {
                 event_type: "abrir",
                 protocol: protocolNum,
                 dispenser_localizacao: params.localizacao,
                 dispenser_status: values.situacao,
                 dispenser_descricao: values.descricao || "",
+                gp_message: gpMessage,
                 submitted_at: new Date().toISOString(),
                 source: "site_dispenser_abrir"
             };

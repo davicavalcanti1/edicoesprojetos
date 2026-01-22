@@ -78,13 +78,24 @@ export default function BanheiroForm() {
 
             if (error) throw error;
 
-            // 4. Webhook N8N (Flat Payload)
+            // 4. Webhook N8N
+            const linkFinalizar = `https://teste.imagoradiologia.cloud/formularios/banheiro/finalizar?protocolo=${protocolNum}`;
+            const gpMessage = `🚻 *CHAMADO ABERTO (BANHEIRO)*
+Protocolo: ${protocolNum}
+Local: ${params.localizacao}
+Problema: ${values.problema}
+Descrição: ${values.descricao}
+
+Clique no link para finalizar o chamado:
+${linkFinalizar}`;
+
             const n8nPayload = {
                 event_type: "abrir",
                 protocol: protocolNum,
                 banheiro_localizacao: params.localizacao,
                 banheiro_problema: values.problema,
                 banheiro_descricao: values.descricao,
+                gp_message: gpMessage,
                 submitted_at: new Date().toISOString(),
                 source: "site_banheiro_abrir"
             };
