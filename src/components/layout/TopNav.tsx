@@ -44,35 +44,48 @@ export function TopNav() {
     { href: "/ocorrencias", label: "Ocorrências", icon: FileText, adminOnly: false },
     { href: "/kanbans", label: "Kanbans", icon: Columns3, adminOnly: false },
     { href: "/analise", label: "Análise", icon: SlidersHorizontal, adminOnly: true },
-    { href: "/relatorios", label: "Dashboard", icon: BarChart3, adminOnly: false },
+    // Novo item Inspeções (Agrupa Dashboard e Relatórios de Chamados)
+    { href: "/inspecoes", label: "Inspeções", icon: BarChart3, adminOnly: false, allowedRoles: ['admin', 'estoque'] },
     { href: "/livro", label: "Livro", icon: BookOpen, adminOnly: false },
 
   ].filter(link => {
+    // 1. Check Admin Only
     if (link.adminOnly && !isAdmin) return false;
 
-    // Explicit exclusions for RH and Enfermagem
+    // 2. Specific Role Exclusions that override allowances
+
+    // RH exclusions
     if (role === 'rh') {
-      // RH sees Home, Ocorrencias, Kanbans, Dashboard (restricted)
       if (link.href === '/analise') return false;
+      if (link.href === '/inspecoes') return false; // RH não vê inspeções operacionais por padrão? Se quiser liberar, remova essa linha.
     }
 
+    // Enfermagem exclusions
     if (role === 'enfermagem') {
-      // Enfermagem sees Home, Ocorrencias, Kanbans, Dashboard (restricted)
       if (link.href === '/analise') return false;
+      if (link.href === '/inspecoes') return false;
     }
 
-    if (role === 'enfermagem') {
-      // Enfermagem sees Home, Ocorrencias, Kanbans, Dashboard (restricted)
-      if (link.href === '/analise') return false;
-    }
-
+    // User exclusions
     if (role === 'user') {
       if (link.href === '/livro') return false;
       if (link.href === '/analise') return false;
+      if (link.href === '/inspecoes') return false;
     }
 
-    // Default role checks (if any specific allowedRoles existed, check them)
-    if ((link as any).allowedRoles && (!role || !(link as any).allowedRoles.includes(role))) return false;
+    // 3. Allowed Roles Whitelist (strongest check)
+    // Se o link define allowedRoles, o usuário PRECISA ter uma delas, OU ser admin (que geralmente bypassa, mas aqui admin está incluso em allowedRoles explicitamente ou tratado em adminOnly)
+    // No caso de 'inspecoes', definimos allowedRoles: ['admin', 'estoque'].
+    if ((link as any).allowedRoles) {
+      // Se usuário é admin, ele passa se admin estiver na lista ou se adminOnly for true (já checado acima).
+      // Mas vamos seguir a lista estrita:
+      const allowed = (link as any).allowedRoles;
+      if (!allowed.includes(role || '')) {
+        // Se não tiver a role exata, bloqueia. (A menos que seja admin e adminOnly=true tratou antes, mas aqui adminOnly=false para inspecoes)
+        if (isAdmin && allowed.includes('admin')) return true;
+        return false;
+      }
+    }
 
     return true;
   });
@@ -103,7 +116,41 @@ export function TopNav() {
           {/* Center: Navigation Links - shifted right */}
           <nav className="hidden lg:flex items-center gap-1 ml-24">
             {navLinks.map((link) => {
-              const isActive = location.pathname === link.href;
+              const isActive = location.pathname === link.href || (link.href === '/inspecoes' && (location.pathname.includes('/dashboard/chamados') || location.pathname.includes('/relatorios/chamados')));
+
+              // Lógica Especial para Inspeções (Dropdown)
+              if (link.label === "Inspeções") {
+                return (
+                  <DropdownMenu key="inspecoes-menu">
+                    <DropdownMenuTrigger
+                      className={cn(
+                        "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors focus:outline-none",
+                        isActive
+                          ? "bg-[#dbeafe] text-[#2563eb]"
+                          : "text-[#64748b] hover:bg-gray-100 hover:text-[#475569]"
+                      )}
+                    >
+                      <link.icon className="h-4 w-4" />
+                      {link.label}
+                      <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem asChild>
+                        <Link to="/dashboard/chamados" className="cursor-pointer">
+                          <BarChart3 className="h-4 w-4 mr-2" />
+                          Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/relatorios/chamados" className="cursor-pointer">
+                          <FileText className="h-4 w-4 mr-2" />
+                          Relatórios
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                );
+              }
 
               if ((link as any).isMock) {
                 return (
