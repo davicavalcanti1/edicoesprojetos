@@ -89,7 +89,7 @@ export default function BanheiroForm() {
                 source: "site_banheiro_abrir"
             };
 
-            await fetch("https://n8n.imagoradiologia.cloud/webhook/Banheiro", {
+            await fetch("https://n8n.imagoradiologia.cloud/webhook/banheiro", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(n8nPayload)
