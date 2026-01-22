@@ -107,21 +107,26 @@ export default function FinalizarDispenser() {
             if (dbError) throw dbError;
 
             // 2. Montar mensagem GP
-            const localizacao = occurrence.descricao_detalhada?.split('\n')[0] || "Local não identificado";
-
-            const gpMessage = `✅ CHAMADO FINALIZADO (DISPENSER DE ÁLCOOL)
-Protocolo: ${protocolo}
-Finalizado por: ${values.funcionario}
-Observações: ${values.observacoes}
-Local: ${localizacao}`;
 
             // 2. Webhook N8N (Flat Payload)
+            const localizacao = occurrence.dados_especificos?.localizacao || "N/A";
+            const statusDispenser = occurrence.dados_especificos?.problema || "N/A";
+            const descricao = occurrence.descricao_detalhada || "-"; // Ou pegar de dados_especificos se tiver salvo lá separado
+
+            const gpMessage = `✅ CHAMADO FINALIZADO (DISPENSER)
+Protocolo: ${protocolo}
+Local: ${localizacao}
+Status Inicial: ${statusDispenser}
+Finalizado por: ${values.funcionario}
+Observações: ${values.observacoes || "Sem observação"}`;
+
             const n8nPayload = {
                 event_type: "finalizar",
                 protocol: protocolo,
                 funcionario: values.funcionario,
                 observacoes: values.observacoes,
-                dispenser_localizacao: occurrence.dados_especificos?.localizacao || "N/A",
+                dispenser_localizacao: localizacao,
+                gp_message: gpMessage,
                 submitted_at: new Date().toISOString(),
                 source: "site_dispenser_finalizar"
             };

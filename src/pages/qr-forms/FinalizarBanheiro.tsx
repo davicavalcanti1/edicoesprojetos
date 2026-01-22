@@ -98,14 +98,26 @@ export default function FinalizarBanheiro() {
 
             if (dbError) throw dbError;
 
-            // 2. Montar mensagem GP
-            // 2. Webhook N8N
+            // 2. Montar mensagem GP e Payload Webhook
+            const localizacao = occurrence.dados_especificos?.localizacao || "N/A";
+            const problema = occurrence.dados_especificos?.problema || "N/A";
+            const descricao = occurrence.dados_especificos?.descricao || "-";
+
+            const gpMessage = `✅ CHAMADO FINALIZADO (BANHEIRO)
+Protocolo: ${protocolo}
+Local: ${localizacao}
+Problema: ${problema}
+Descrição: ${descricao}
+Finalizado por: ${values.funcionario}
+Observações: ${values.observacoes || "Sem observação"}`;
+
             const n8nPayload = {
                 event_type: "finalizar",
                 protocol: protocolo,
                 funcionario: values.funcionario,
                 observacoes: values.observacoes,
-                banheiro_localizacao: occurrence.dados_especificos?.localizacao || "N/A",
+                banheiro_localizacao: localizacao,
+                gp_message: gpMessage,
                 submitted_at: new Date().toISOString(),
                 source: "site_banheiro_finalizar"
             };
