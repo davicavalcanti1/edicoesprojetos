@@ -139,16 +139,23 @@ export default function DashboardChamados({ typeFilter, embedded }: { typeFilter
         });
     };
 
+    // Extrair tipos únicos para gráficos dinâmicos
+    const uniqueTypes = Array.from(new Set(dados.map(d => d.tipo_chamado))).filter(Boolean);
+
     // Preparar dados para Gráficos
     const dadosPorDia = () => {
         // Agrupar por dia (dd/MM)
         const agrupado = dados.reduce((acc: any, curr) => {
             const dataStr = format(parseISO(curr.data_abertura), "dd/MM", { locale: ptBR });
-            if (!acc[dataStr]) acc[dataStr] = { name: dataStr, total: 0, banheiro: 0, dispenser: 0 };
+            if (!acc[dataStr]) {
+                acc[dataStr] = { name: dataStr, total: 0 };
+                uniqueTypes.forEach(t => acc[dataStr][t] = 0);
+            }
 
             acc[dataStr].total += 1;
-            if (curr.tipo_chamado === 'banheiro') acc[dataStr].banheiro += 1;
-            if (curr.tipo_chamado === 'dispenser') acc[dataStr].dispenser += 1;
+            if (curr.tipo_chamado) {
+                acc[dataStr][curr.tipo_chamado] = (acc[dataStr][curr.tipo_chamado] || 0) + 1;
+            }
 
             return acc;
         }, {});
@@ -156,10 +163,10 @@ export default function DashboardChamados({ typeFilter, embedded }: { typeFilter
         return Object.values(agrupado); // Recharts aceita array
     };
 
-    const dadosPorTipo = [
-        { name: 'Banheiro', value: dados.filter(d => d.tipo_chamado === 'banheiro').length },
-        { name: 'Dispenser', value: dados.filter(d => d.tipo_chamado === 'dispenser').length }
-    ].filter(d => d.value > 0);
+    const dadosPorTipo = uniqueTypes.map(type => ({
+        name: type,
+        value: dados.filter(d => d.tipo_chamado === type).length
+    })).filter(d => d.value > 0);
 
     const content = (
         <div className="space-y-6">
@@ -236,9 +243,16 @@ export default function DashboardChamados({ typeFilter, embedded }: { typeFilter
                                 <YAxis />
                                 <Tooltip />
                                 <Legend />
-                                <Line type="monotone" dataKey="banheiro" stroke="#0088FE" name="Banheiro" />
-                                <Line type="monotone" dataKey="dispenser" stroke="#00C49F" name="Dispenser" />
-                                <Line type="monotone" dataKey="total" stroke="#8884d8" name="Total" strokeDasharray="5 5" />
+                                <Line type="monotone" dataKey="total" stroke="#000000" strokeWidth={2} name="Total Geral" />
+                                {uniqueTypes.map((type, index) => (
+                                    <Line
+                                        key={type}
+                                        type="monotone"
+                                        dataKey={type}
+                                        stroke={COLORS[index % COLORS.length]}
+                                        name={type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, " ")}
+                                    />
+                                ))}
                             </LineChart>
                         </ResponsiveContainer>
                     </CardContent>
