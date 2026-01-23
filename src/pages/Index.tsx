@@ -36,7 +36,7 @@ export default function Index() {
               <Button
                 onClick={() => navigate("/ocorrencias/nova/assistencial/revisao_exame")}
                 size="lg"
-                className="w-full h-24 text-lg gap-4 bg-blue-600 hover:bg-blue-700 shadow-lg transition-all hover:scale-[1.01] justify-start px-8"
+                className="w-full h-24 text-lg gap-4 bg-primary hover:bg-primary/90 shadow-lg transition-all hover:scale-[1.01] justify-start px-8"
               >
                 <div className="flex items-center justify-center h-12 w-12 rounded-full bg-white/20 shrink-0">
                   <Plus className="h-6 w-6" />
@@ -53,7 +53,7 @@ export default function Index() {
               <Button
                 onClick={() => navigate("/ocorrencias/nova/administrativa")}
                 size="lg"
-                className="w-full h-24 text-lg gap-4 bg-blue-600 hover:bg-blue-700 shadow-lg transition-all hover:scale-[1.01] justify-start px-8"
+                className="w-full h-24 text-lg gap-4 bg-primary hover:bg-primary/90 shadow-lg transition-all hover:scale-[1.01] justify-start px-8"
               >
                 <div className="flex items-center justify-center h-12 w-12 rounded-full bg-white/20 shrink-0">
                   <Briefcase className="h-6 w-6" />
@@ -70,7 +70,7 @@ export default function Index() {
               <Button
                 onClick={() => navigate("/ocorrencias/nova/enfermagem")}
                 size="lg"
-                className="w-full h-24 text-lg gap-4 bg-blue-600 hover:bg-blue-700 shadow-lg transition-all hover:scale-[1.01] justify-start px-8"
+                className="w-full h-24 text-lg gap-4 bg-primary hover:bg-primary/90 shadow-lg transition-all hover:scale-[1.01] justify-start px-8"
               >
                 <div className="flex items-center justify-center h-12 w-12 rounded-full bg-white/20 shrink-0">
                   <Plus className="h-6 w-6" />
@@ -86,7 +86,7 @@ export default function Index() {
             <Button
               onClick={() => navigate("/ocorrencias/nova-livre")}
               size="lg"
-              className="w-full h-24 text-lg gap-4 bg-blue-600 hover:bg-blue-700 shadow-lg transition-all hover:scale-[1.01] justify-start px-8"
+              className="w-full h-24 text-lg gap-4 bg-primary hover:bg-primary/90 shadow-lg transition-all hover:scale-[1.01] justify-start px-8"
             >
               <div className="flex items-center justify-center h-12 w-12 rounded-full bg-white/20 shrink-0">
                 <div className="h-6 w-6 text-white flex items-center justify-center font-bold">L</div>
