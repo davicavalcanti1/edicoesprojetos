@@ -384,7 +384,27 @@ export default function Analise() {
                       </div>
                       <div className="flex-1">
                         <h4 className="font-semibold text-sm mb-1">{occ.paciente_nome_completo || "Paciente não informado"}</h4>
-                        <p className="text-sm text-foreground/80 line-clamp-2">{occ.descricao_detalhada}</p>
+                        <h4 className="font-semibold text-sm mb-1">{occ.paciente_nome_completo || "Paciente não informado"}</h4>
+                        <div className="text-sm text-foreground/80">
+                          {(() => {
+                            try {
+                              if (occ.descricao_detalhada?.startsWith('{')) {
+                                const parsed = JSON.parse(occ.descricao_detalhada);
+                                return (
+                                  <div className="space-y-1 mt-1 text-xs">
+                                    {parsed.exameModalidade && <div className="flex gap-1"><span className="font-semibold">Exame:</span> {parsed.exameModalidade}</div>}
+                                    {parsed.exameRegiao && <div className="flex gap-1"><span className="font-semibold">Região:</span> {parsed.exameRegiao}</div>}
+                                    {parsed.motivoRevisao && <div className="flex gap-1"><span className="font-semibold">Motivo:</span> {parsed.motivoRevisao}</div>}
+                                    {parsed.acaoTomada && <div className="flex gap-1"><span className="font-semibold">Ação:</span> {parsed.acaoTomada}</div>}
+                                  </div>
+                                );
+                              }
+                              return <p className="line-clamp-2">{occ.descricao_detalhada}</p>;
+                            } catch (e) {
+                              return <p className="line-clamp-2">{occ.descricao_detalhada}</p>;
+                            }
+                          })()}
+                        </div>
                         {occ.desfecho_tipos && occ.desfecho_tipos.length > 0 && (
                           <div className="mt-2 text-xs">
                             <span className="font-semibold">Desfecho: </span>

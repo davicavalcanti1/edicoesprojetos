@@ -30,8 +30,9 @@ export default function FinalizarChamado() {
 
     const loadOccurrence = async () => {
         try {
+            // @ts-ignore
             const { data, error } = await supabase
-                .from("occurrences")
+                .from("maintenance_records")
                 .select("*")
                 .eq("protocolo", protocolo)
                 .single();
@@ -40,7 +41,7 @@ export default function FinalizarChamado() {
             if (!data) throw new Error("Chamado não encontrado.");
 
             // Verifica se já está concluída
-            if (data.status === "concluida") {
+            if ((data as any).status === "concluida") {
                 setError("Este chamado já foi finalizado.");
             }
 
@@ -59,30 +60,28 @@ export default function FinalizarChamado() {
         setIsSubmitting(true);
         try {
             // 1. Atualizar Supabase
+            // @ts-ignore
             const { error: dbError } = await supabase
-                .from("occurrences")
+                .from("maintenance_records")
                 .update({
                     status: "concluida",
-                    finalizada_em: new Date().toISOString()
+                    finalizado_em: new Date().toISOString()
                 })
                 .eq("id", occurrence.id);
 
             if (dbError) throw dbError;
 
             // 2. Montar mensagem GP
-            // Recuperar dados originais se possível (estão em dados_especificos ou descricao_detalhada)
-            // Mas para finalização, o status é o mais importante.
-
-            // Tentar extrair tipo do ticket para saber webhook
-            let tipoEnvio = "tecnica"; // padrão
-            // Tentamos adivinhar pelo texto ou salvar um metadado melhor. 
-            // Vou usar uma busca simples na descrição ou se tivermos salvo nos metadados.
-            // No passo anterior salvei: subtipo='predial', descricao_detalhada tem '[QR Code - dispenser] ...'
-
+            let tipoEnvio = "tecnica";
             let webhookType = null;
-            if (occurrence.descricao_detalhada?.toLowerCase().includes("dispenser") || occurrence.subtipo === "dispenser") {
+
+            // Check descriptions (maitenance_records has 'descricao' column mapped to 'descricao_detalhada' in logic notion)
+            const desc = occurrence.descricao || "";
+            const tipo = occurrence.tipo_origem || occurrence.subtipo || "";
+
+            if (desc.toLowerCase().includes("dispenser") || tipo === "dispenser") {
                 webhookType = "dispenser";
-            } else if (occurrence.descricao_detalhada?.toLowerCase().includes("banheiro") || occurrence.subtipo === "banheiro") {
+            } else if (desc.toLowerCase().includes("banheiro") || tipo === "banheiro") {
                 webhookType = "banheiro";
             }
 
@@ -179,7 +178,7 @@ export default function FinalizarChamado() {
                     <div className="mb-6 p-4 rounded-lg bg-secondary/50 border border-secondary text-sm">
                         <p className="font-semibold text-foreground/80">Detalhes:</p>
                         <p className="text-muted-foreground whitespace-pre-wrap mt-1">
-                            {occurrence?.descricao_detalhada}
+                            {occurrence?.descricao}
                         </p>
                     </div>
 

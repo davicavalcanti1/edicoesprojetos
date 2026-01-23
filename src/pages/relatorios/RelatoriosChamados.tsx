@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Loader2, Download, Search, Eye, FileText } from "lucide-react";
 import { startOfDay, endOfDay, subDays, startOfMonth, format, parseISO } from "date-fns";
 
-export default function RelatoriosChamados() {
+export default function RelatoriosChamados({ typeFilter }: { typeFilter?: 'ar_condicionado' | 'dispenser' | 'banheiro' | undefined }) {
     // Filtros
     const [periodo, setPeriodo] = useState("30dias");
     const [dataInicio, setDataInicio] = useState("");
@@ -32,7 +32,7 @@ export default function RelatoriosChamados() {
 
     useEffect(() => {
         carregarDados();
-    }, [periodo, dataInicio, dataFim, filtroTipo, filtroStatus]); // Busca dispara no reload mas filtro de texto é local ou debounce? Faremos query no fetch para filtros pesados
+    }, [periodo, dataInicio, dataFim, filtroTipo, filtroStatus, typeFilter]); // Busca dispara no reload mas filtro de texto é local ou debounce? Faremos query no fetch para filtros pesados
 
     const getIntervalo = () => {
         const hoje = new Date();
@@ -65,6 +65,7 @@ export default function RelatoriosChamados() {
                 return;
             }
 
+            // @ts-ignore
             let query = supabase
                 .from("operacional_chamados_view")
                 .select("*")
@@ -72,8 +73,11 @@ export default function RelatoriosChamados() {
                 .lte("data_abertura", end.toISOString())
                 .order('data_abertura', { ascending: false });
 
-            if (filtroTipo !== "todos") {
-                query = query.eq("tipo_chamado", filtroTipo);
+            // Prop overrides state if present
+            const effectiveType = typeFilter || (filtroTipo !== "todos" ? filtroTipo : null);
+
+            if (effectiveType) {
+                query = query.eq("tipo_chamado", effectiveType);
             }
 
             if (filtroStatus === "abertos") {
@@ -160,16 +164,19 @@ export default function RelatoriosChamados() {
                                 </>
                             )}
 
-                            <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                                <SelectTrigger className="w-[140px]">
-                                    <SelectValue placeholder="Tipo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="todos">Todos Tipos</SelectItem>
-                                    <SelectItem value="dispenser">Dispenser</SelectItem>
-                                    <SelectItem value="banheiro">Banheiro</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            {!typeFilter && (
+                                <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+                                    <SelectTrigger className="w-[140px]">
+                                        <SelectValue placeholder="Tipo" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="todos">Todos Tipos</SelectItem>
+                                        <SelectItem value="dispenser">Dispenser</SelectItem>
+                                        <SelectItem value="banheiro">Banheiro</SelectItem>
+                                        <SelectItem value="ar_condicionado">Ar Condicionado</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            )}
 
                             <Select value={filtroStatus} onValueChange={setFiltroStatus}>
                                 <SelectTrigger className="w-[140px]">

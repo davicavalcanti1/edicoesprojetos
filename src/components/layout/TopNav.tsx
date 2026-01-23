@@ -45,8 +45,7 @@ export function TopNav() {
 
     { href: "/analise", label: "Análise", icon: SlidersHorizontal, adminOnly: true },
     { href: "/relatorios", label: "Dashboard", icon: BarChart3, adminOnly: false },
-    // Novo item Inspeções (Agrupa Dashboard e Relatórios de Chamados Operacionais)
-    { href: "/inspecoes", label: "Inspeções", icon: Package, adminOnly: false, allowedRoles: ['admin', 'estoque'] },
+    { href: "/implementacoes", label: "Implementações", icon: Package, adminOnly: false, allowedRoles: ['admin', 'estoque'] },
     { href: "/livro", label: "Livro", icon: BookOpen, adminOnly: false },
 
   ].filter(link => {
@@ -118,40 +117,6 @@ export function TopNav() {
           <nav className="hidden lg:flex items-center gap-1 ml-24">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.href || (link.href === '/inspecoes' && (location.pathname.includes('/dashboard/chamados') || location.pathname.includes('/relatorios/chamados')));
-
-              // Lógica Especial para Inspeções (Dropdown)
-              if (link.label === "Inspeções") {
-                return (
-                  <DropdownMenu key="inspecoes-menu">
-                    <DropdownMenuTrigger
-                      className={cn(
-                        "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors focus:outline-none",
-                        isActive
-                          ? "bg-[#dbeafe] text-[#2563eb]"
-                          : "text-[#64748b] hover:bg-gray-100 hover:text-[#475569]"
-                      )}
-                    >
-                      <link.icon className="h-4 w-4" />
-                      {link.label}
-                      <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem asChild>
-                        <Link to="/dashboard/chamados" className="cursor-pointer">
-                          <BarChart3 className="h-4 w-4 mr-2" />
-                          Dashboard
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/relatorios/chamados" className="cursor-pointer">
-                          <FileText className="h-4 w-4 mr-2" />
-                          Relatórios
-                        </Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                );
-              }
 
               if ((link as any).isMock) {
                 return (

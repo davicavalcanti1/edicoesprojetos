@@ -14,7 +14,7 @@ import { ptBR } from "date-fns/locale";
 // Cores para gráficos
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
-export default function DashboardChamados() {
+export default function DashboardChamados({ typeFilter }: { typeFilter?: 'ar_condicionado' | 'dispenser' | 'banheiro' | undefined }) {
     // Estados de Filtro
     const [periodo, setPeriodo] = useState("hoje");
     const [dataInicio, setDataInicio] = useState("");
@@ -36,7 +36,7 @@ export default function DashboardChamados() {
     // Ao montar ou mudar filtros
     useEffect(() => {
         carregarDados();
-    }, [periodo, dataInicio, dataFim]);
+    }, [periodo, dataInicio, dataFim, typeFilter]);
 
     const getIntervalo = () => {
         const hoje = new Date();
@@ -68,11 +68,18 @@ export default function DashboardChamados() {
                 return;
             }
 
-            const { data, error } = await supabase
+            // @ts-ignore
+            let query = supabase
                 .from("operacional_chamados_view")
                 .select("*")
                 .gte("data_abertura", start.toISOString())
                 .lte("data_abertura", end.toISOString());
+
+            if (typeFilter) {
+                query = query.eq("tipo_chamado", typeFilter);
+            }
+
+            const { data, error } = await query;
 
             if (error) throw error;
 

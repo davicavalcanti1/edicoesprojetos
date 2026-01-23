@@ -71,30 +71,35 @@ export async function sendQrForm(payload: QrWebhookPayload): Promise<boolean> {
             tenantId = tenant?.id;
         }
 
-        if (!tenantId) {
-            throw new Error("Tenant ID não encontrado. Não é possível salvar o chamado.");
-        }
-
-        // 3. Salvar no Supabase
-        const occurrenceData = {
+        // 3. Salvar no Supabase (Tabela de Chamados / maintenance_records)
+        const maintenanceData = {
             protocolo: protocol,
-            tipo: "tecnica",
-            subtipo: "predial",
-            descricao_detalhada: `[QR Code - ${payload.tipo}] ${payload.localizacao}\n\n${JSON.stringify(payload.dados_usuario, null, 2)}`,
-            status: "registrada",
-            tenant_id: tenantId,
+            tipo_origem: payload.tipo, // 'ar_condicionado', 'banheiro', 'dispenser'
+            subtipo: payload.tipo,     // redundante mas útil
+            localizacao: payload.localizacao,
+
+            // Campos de metadados específicos se houver
+            sala: payload.metadata?.sala || null,
+            modelo: payload.metadata?.modelo || null,
+            numero_serie: payload.metadata?.numero_serie || null,
+
+            // Descrição e Status
+            descricao: payload.dados_usuario.descricao || JSON.stringify(payload.dados_usuario),
+            status: "aberto",
+
+            // Auditoria
             criado_por: userId,
-            dados_especificos: payload.dados_usuario,
-            observacoes: payload.metadata ? JSON.stringify(payload.metadata) : null,
-            criado_em: new Date().toISOString(),
-            atualizado_em: new Date().toISOString(),
+            // responsavel: null, // Será atribuído depois
+            // data_manutencao: null, // Será preenchido na execução
+
+            fotos: []
         };
 
         // @ts-ignore
-        const { error: dbError } = await supabase.from("occurrences").insert(occurrenceData);
+        const { error: dbError } = await supabase.from("maintenance_records").insert(maintenanceData);
 
         if (dbError) {
-            console.error("Erro ao salvar no Supabase:", dbError);
+            console.error("Erro ao salvar no Supabase (maintenance_records):", dbError);
             throw new Error(`Erro ao salvar no banco de dados: ${dbError.message}`);
         }
 
