@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Loader2, Download, Search, Eye, FileText } from "lucide-react";
 import { startOfDay, endOfDay, subDays, startOfMonth, format, parseISO } from "date-fns";
 
-export default function RelatoriosChamados({ typeFilter }: { typeFilter?: 'ar_condicionado' | 'dispenser' | 'banheiro' | undefined }) {
+export default function RelatoriosChamados({ typeFilter, embedded }: { typeFilter?: 'ar_condicionado' | 'dispenser' | 'banheiro' | undefined, embedded?: boolean }) {
     // Filtros
     const [periodo, setPeriodo] = useState("30dias");
     const [dataInicio, setDataInicio] = useState("");
@@ -139,8 +139,8 @@ export default function RelatoriosChamados({ typeFilter }: { typeFilter?: 'ar_co
         link.click();
     };
 
-    return (
-        <SimpleLayout title="Relatórios de Chamados" subtitle="Consulta detalhada e exportação">
+    const content = (
+        <>
             <Card>
                 <CardHeader>
                     <div className="flex flex-col lg:flex-row gap-4 justify-between">
@@ -329,6 +329,17 @@ export default function RelatoriosChamados({ typeFilter }: { typeFilter?: 'ar_co
                     )}
                 </DialogContent>
             </Dialog>
+        </>
+    );
+
+    if (embedded) {
+        return content;
+    }
+
+    return (
+        <SimpleLayout title="Relatórios de Chamados" subtitle="Consulta detalhada e exportação">
+            {content}
         </SimpleLayout>
     );
 }
+

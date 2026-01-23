@@ -15,11 +15,11 @@ const FilteredDashboardWrapper = ({ type }: { type?: 'ar_condicionado' | 'dispen
     // If the DashboardChamados supports filtering by props, we pass it. 
     // currently it reads from DB view which has "tipo_chamado".
     // We'll need to update DashboardChamados to accept a filter prop or we filter in client side there.
-    return <DashboardChamados typeFilter={type} />;
+    return <DashboardChamados typeFilter={type} embedded={true} />;
 };
 
 const FilteredRelatoriosWrapper = ({ type }: { type?: 'ar_condicionado' | 'dispenser' | 'banheiro' | undefined }) => {
-    return <RelatoriosChamados typeFilter={type} />;
+    return <RelatoriosChamados typeFilter={type} embedded={true} />;
 }
 
 
@@ -81,9 +81,11 @@ export default function Inspecoes() {
 
     const getButtonStyle = (tabName: string) => {
         const isActive = activeTab === tabName;
+        // We rely on variant='default' for active color, so we don't need manual bg-primary here.
+        // We just add layout and hover scale.
         return `h-auto py-6 flex flex-col gap-3 transition-all duration-300 ${isActive
-            ? 'bg-primary text-primary-foreground shadow-lg scale-[1.02] ring-2 ring-primary ring-offset-2'
-            : 'bg-white hover:bg-gray-50 text-muted-foreground hover:text-primary hover:scale-[1.01] shadow-sm border border-slate-200'
+            ? 'shadow-lg scale-[1.02] ring-2 ring-primary ring-offset-2'
+            : 'hover:bg-gray-50 hover:scale-[1.01] shadow-sm'
             }`;
     };
 
@@ -93,7 +95,7 @@ export default function Inspecoes() {
                 {/* Header with 5 Buttons */}
                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                     <Button
-                        variant="ghost"
+                        variant={activeTab === 'dashboard' ? 'default' : 'outline'}
                         className={getButtonStyle('dashboard')}
                         onClick={() => setActiveTab('dashboard')}
                     >
@@ -102,7 +104,7 @@ export default function Inspecoes() {
                     </Button>
 
                     <Button
-                        variant="ghost"
+                        variant={activeTab === 'relatorios' ? 'default' : 'outline'}
                         className={getButtonStyle('relatorios')}
                         onClick={() => setActiveTab('relatorios')}
                     >
@@ -111,7 +113,7 @@ export default function Inspecoes() {
                     </Button>
 
                     <Button
-                        variant="ghost"
+                        variant={activeTab === 'ar_condicionado' ? 'default' : 'outline'}
                         className={getButtonStyle('ar_condicionado')}
                         onClick={() => setActiveTab('ar_condicionado')}
                     >
@@ -120,7 +122,7 @@ export default function Inspecoes() {
                     </Button>
 
                     <Button
-                        variant="ghost"
+                        variant={activeTab === 'dispenser' ? 'default' : 'outline'}
                         className={getButtonStyle('dispenser')}
                         onClick={() => setActiveTab('dispenser')}
                     >
@@ -129,7 +131,7 @@ export default function Inspecoes() {
                     </Button>
 
                     <Button
-                        variant="ghost"
+                        variant={activeTab === 'banheiro' ? 'default' : 'outline'}
                         className={getButtonStyle('banheiro')}
                         onClick={() => setActiveTab('banheiro')}
                     >

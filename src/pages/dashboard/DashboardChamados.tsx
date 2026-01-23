@@ -14,7 +14,7 @@ import { ptBR } from "date-fns/locale";
 // Cores para gráficos
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
-export default function DashboardChamados({ typeFilter }: { typeFilter?: 'ar_condicionado' | 'dispenser' | 'banheiro' | undefined }) {
+export default function DashboardChamados({ typeFilter, embedded }: { typeFilter?: 'ar_condicionado' | 'dispenser' | 'banheiro' | undefined, embedded?: boolean }) {
     // Estados de Filtro
     const [periodo, setPeriodo] = useState("hoje");
     const [dataInicio, setDataInicio] = useState("");
@@ -161,132 +161,140 @@ export default function DashboardChamados({ typeFilter }: { typeFilter?: 'ar_con
         { name: 'Dispenser', value: dados.filter(d => d.tipo_chamado === 'dispenser').length }
     ].filter(d => d.value > 0);
 
-    return (
-        <SimpleLayout title="Dashboard de Chamados" subtitle="Visão geral operacional">
-            <div className="space-y-6">
+    const content = (
+        <div className="space-y-6">
 
-                {/* Filtros */}
-                <Card>
-                    <CardContent className="pt-6 flex flex-wrap gap-4 items-center">
-                        <div className="flex items-center gap-2">
-                            <Filter className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">Período:</span>
+            {/* Filtros */}
+            <Card>
+                <CardContent className="pt-6 flex flex-wrap gap-4 items-center">
+                    <div className="flex items-center gap-2">
+                        <Filter className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Período:</span>
+                    </div>
+                    <Select value={periodo} onValueChange={setPeriodo}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="hoje">Hoje</SelectItem>
+                            <SelectItem value="7dias">Últimos 7 dias</SelectItem>
+                            <SelectItem value="30dias">Últimos 30 dias</SelectItem>
+                            <SelectItem value="mesAtual">Mês Atual</SelectItem>
+                            <SelectItem value="custom">Personalizado</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    {periodo === "custom" && (
+                        <div className="flex gap-2 items-center animate-in fade-in">
+                            <Input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="w-[160px]" />
+                            <span>até</span>
+                            <Input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="w-[160px]" />
                         </div>
-                        <Select value={periodo} onValueChange={setPeriodo}>
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="hoje">Hoje</SelectItem>
-                                <SelectItem value="7dias">Últimos 7 dias</SelectItem>
-                                <SelectItem value="30dias">Últimos 30 dias</SelectItem>
-                                <SelectItem value="mesAtual">Mês Atual</SelectItem>
-                                <SelectItem value="custom">Personalizado</SelectItem>
-                            </SelectContent>
-                        </Select>
+                    )}
 
-                        {periodo === "custom" && (
-                            <div className="flex gap-2 items-center animate-in fade-in">
-                                <Input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="w-[160px]" />
-                                <span>até</span>
-                                <Input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="w-[160px]" />
-                            </div>
-                        )}
+                    <Button variant="ghost" size="icon" onClick={carregarDados} disabled={loading}>
+                        <RefreshCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    </Button>
+                </CardContent>
+            </Card>
 
-                        <Button variant="ghost" size="icon" onClick={carregarDados} disabled={loading}>
-                            <RefreshCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                        </Button>
+            {/* Cards Métricas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Chamados</CardTitle></CardHeader>
+                    <CardContent><div className="text-2xl font-bold">{metricas.total}</div></CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Abertos</CardTitle></CardHeader>
+                    <CardContent><div className="text-2xl font-bold text-orange-500">{metricas.abertos}</div></CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Finalizados</CardTitle></CardHeader>
+                    <CardContent><div className="text-2xl font-bold text-green-600">{metricas.finalizados}</div>
+                        <p className="text-xs text-muted-foreground">{metricas.taxaFinalizacao.toFixed(1)}% taxa</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Tempo Médio</CardTitle></CardHeader>
+                    <CardContent><div className="text-2xl font-bold">{metricas.tempoMedio.toFixed(1)} h</div></CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Mais Frequente</CardTitle></CardHeader>
+                    <CardContent><div className="text-2xl font-bold capitalize">{metricas.tipoMaisFrequente}</div></CardContent>
+                </Card>
+            </div>
+
+            {/* Gráficos */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="col-span-1">
+                    <CardHeader><CardTitle>Chamados por Dia</CardTitle></CardHeader>
+                    <CardContent className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={dadosPorDia()}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <Tooltip />
+                                <Legend />
+                                <Line type="monotone" dataKey="banheiro" stroke="#0088FE" name="Banheiro" />
+                                <Line type="monotone" dataKey="dispenser" stroke="#00C49F" name="Dispenser" />
+                                <Line type="monotone" dataKey="total" stroke="#8884d8" name="Total" strokeDasharray="5 5" />
+                            </LineChart>
+                        </ResponsiveContainer>
                     </CardContent>
                 </Card>
 
-                {/* Cards Métricas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <Card>
-                        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Chamados</CardTitle></CardHeader>
-                        <CardContent><div className="text-2xl font-bold">{metricas.total}</div></CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Abertos</CardTitle></CardHeader>
-                        <CardContent><div className="text-2xl font-bold text-orange-500">{metricas.abertos}</div></CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Finalizados</CardTitle></CardHeader>
-                        <CardContent><div className="text-2xl font-bold text-green-600">{metricas.finalizados}</div>
-                            <p className="text-xs text-muted-foreground">{metricas.taxaFinalizacao.toFixed(1)}% taxa</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Tempo Médio</CardTitle></CardHeader>
-                        <CardContent><div className="text-2xl font-bold">{metricas.tempoMedio.toFixed(1)} h</div></CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Mais Frequente</CardTitle></CardHeader>
-                        <CardContent><div className="text-2xl font-bold capitalize">{metricas.tipoMaisFrequente}</div></CardContent>
-                    </Card>
-                </div>
+                <Card className="col-span-1">
+                    <CardHeader><CardTitle>Por Tipo</CardTitle></CardHeader>
+                    <CardContent className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={dadosPorTipo}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                    outerRadius={100}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                >
+                                    {dadosPorTipo.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
 
-                {/* Gráficos */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card className="col-span-1">
-                        <CardHeader><CardTitle>Chamados por Dia</CardTitle></CardHeader>
-                        <CardContent className="h-[300px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={dadosPorDia()}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Legend />
-                                    <Line type="monotone" dataKey="banheiro" stroke="#0088FE" name="Banheiro" />
-                                    <Line type="monotone" dataKey="dispenser" stroke="#00C49F" name="Dispenser" />
-                                    <Line type="monotone" dataKey="total" stroke="#8884d8" name="Total" strokeDasharray="5 5" />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="col-span-1">
-                        <CardHeader><CardTitle>Por Tipo</CardTitle></CardHeader>
-                        <CardContent className="h-[300px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={dadosPorTipo}
-                                        cx="50%"
-                                        cy="50%"
-                                        labelLine={false}
-                                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                        outerRadius={100}
-                                        fill="#8884d8"
-                                        dataKey="value"
-                                    >
-                                        {dadosPorTipo.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="col-span-1 lg:col-span-2">
-                        <CardHeader><CardTitle>Top 5 Localizações</CardTitle></CardHeader>
-                        <CardContent className="h-[300px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={metricas.topLocais} layout="vertical" margin={{ left: 100 }}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis type="number" />
-                                    <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 12 }} />
-                                    <Tooltip />
-                                    <Bar dataKey="value" fill="#8884d8" name="Qtd. Chamados" radius={[0, 4, 4, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </CardContent>
-                    </Card>
-                </div>
-
+                <Card className="col-span-1 lg:col-span-2">
+                    <CardHeader><CardTitle>Top 5 Localizações</CardTitle></CardHeader>
+                    <CardContent className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={metricas.topLocais} layout="vertical" margin={{ left: 100 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis type="number" />
+                                <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 12 }} />
+                                <Tooltip />
+                                <Bar dataKey="value" fill="#8884d8" name="Qtd. Chamados" radius={[0, 4, 4, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
             </div>
+
+        </div>
+    );
+
+    if (embedded) {
+        return content;
+    }
+
+    return (
+        <SimpleLayout title="Dashboard de Chamados" subtitle="Visão geral operacional">
+            {content}
         </SimpleLayout>
     );
 }
