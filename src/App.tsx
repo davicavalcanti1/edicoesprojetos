@@ -41,13 +41,14 @@ import ArCondicionadoForm from "./pages/qr-forms/ArCondicionadoForm";
 import FinalizarChamado from "./pages/qr-forms/FinalizarChamado";
 import FinalizarDispenser from "./pages/qr-forms/FinalizarDispenser";
 import FinalizarBanheiro from "./pages/qr-forms/FinalizarBanheiro";
+import WhatsappOccurrenceForm from "./pages/WhatsappOccurrenceForm";
 import ServicosTerceirizadosForm from "./pages/qr-forms/ServicosTerceirizadosForm";
 import ArImagoForm from "./pages/qr-forms/ar-condicionado/ArImagoForm";
 import ArTerceirizadoForm from "./pages/qr-forms/ar-condicionado/ArTerceirizadoForm";
 import ArDrenoForm from "./pages/qr-forms/ar-condicionado/ArDrenoForm";
 import DashboardChamados from "@/pages/dashboard/DashboardChamados";
 import RelatoriosChamados from "@/pages/relatorios/RelatoriosChamados";
-import Implementacoes from "@/pages/Implementacoes";
+import Inspecoes from "@/pages/Inspecoes";
 import Migrations from "./pages/Migrations";
 
 
@@ -63,6 +64,7 @@ const App = () => (
           <Routes>
             {/* Public routes */}
             <Route path="/auth" element={<Auth />} />
+            <Route path="/whatsapp" element={<WhatsappOccurrenceForm />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/paciente" element={<PublicPatientOccurrence />} />
 
@@ -198,10 +200,10 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            {/* Implementações (Dashboard de Manutenção e Serviços) */}
-            <Route path="/implementacoes" element={
+            {/* Inspeções (Dashboard de Manutenção e Serviços) */}
+            <Route path="/inspecoes" element={
               <ProtectedRoute allowedRoles={['admin', 'estoque']}>
-                <Implementacoes />
+                <Inspecoes />
               </ProtectedRoute>
             } />
 

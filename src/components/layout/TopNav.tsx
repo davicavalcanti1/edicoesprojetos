@@ -45,7 +45,7 @@ export function TopNav() {
 
     { href: "/analise", label: "Análise", icon: SlidersHorizontal, adminOnly: true },
     { href: "/relatorios", label: "Dashboard", icon: BarChart3, adminOnly: false },
-    { href: "/implementacoes", label: "Implementações", icon: Package, adminOnly: false, allowedRoles: ['admin', 'estoque'] },
+    { href: "/inspecoes", label: "Inspeções", icon: Package, adminOnly: false, allowedRoles: ['admin', 'estoque'] },
     { href: "/livro", label: "Livro", icon: BookOpen, adminOnly: false },
 
   ].filter(link => {
