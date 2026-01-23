@@ -139,6 +139,9 @@ export default function Ocorrencias() {
         if (item.normalizedType !== typeFilter) return false;
       }
 
+      // 2.1 Hide Technical Occurrences (as requested by user)
+      if (item.normalizedType === 'tecnica') return false;
+
       // 3. Status
       if (statusFilter !== 'all') {
         if (item.status !== statusFilter) return false;

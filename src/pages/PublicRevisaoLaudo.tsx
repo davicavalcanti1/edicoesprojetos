@@ -29,6 +29,7 @@ interface PublicOccurrence {
   id: string;
   protocolo: string;
   paciente_nome_completo: string | null;
+  paciente_id: string | null;
   paciente_tipo_exame: string | null;
   paciente_unidade_local: string | null;
   paciente_data_hora_evento: string | null;
@@ -66,7 +67,7 @@ export default function PublicRevisaoLaudo() {
         const { data, error } = await (supabase
           .from("occurrences")
           .select(
-            "id, protocolo, paciente_nome_completo, paciente_tipo_exame, paciente_unidade_local, paciente_data_hora_evento, paciente_sexo, paciente_telefone, descricao_detalhada, mensagem_admin_medico, mensagem_medico, status, medico_destino, encaminhada_em, finalizada_em"
+            "id, protocolo, paciente_nome_completo, paciente_id, paciente_tipo_exame, paciente_unidade_local, paciente_data_hora_evento, paciente_sexo, paciente_telefone, descricao_detalhada, mensagem_admin_medico, mensagem_medico, status, medico_destino, encaminhada_em, finalizada_em"
           )
           .eq("public_token", token)
           .eq("subtipo", "revisao_exame")
@@ -471,6 +472,12 @@ export default function PublicRevisaoLaudo() {
               </p>
             </div>
             <div className="p-4 rounded-xl bg-secondary/30 border border-secondary/50">
+              <p className="text-muted-foreground text-xs mb-1 uppercase tracking-wide">ID / Prontuário</p>
+              <p className="font-semibold text-base text-foreground">
+                {occurrence?.paciente_id || "Não informado"}
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-secondary/30 border border-secondary/50">
               <p className="text-muted-foreground text-xs mb-1 uppercase tracking-wide">Unidade</p>
               <p className="font-semibold text-base text-foreground">
                 {occurrence?.paciente_unidade_local || "Não informada"}
@@ -497,8 +504,8 @@ export default function PublicRevisaoLaudo() {
               <p className="font-semibold text-base text-foreground">{occurrence?.paciente_sexo || "Não informado"}</p>
             </div>
             <div className="p-4 rounded-xl bg-secondary/30 border border-secondary/50">
-              <p className="text-muted-foreground text-xs mb-1 uppercase tracking-wide">Tipo de Exame</p>
-              <p className="font-semibold text-base text-foreground">{occurrence?.paciente_tipo_exame || "Não informado"}</p>
+              <p className="text-muted-foreground text-xs mb-1 uppercase tracking-wide">Sexo</p>
+              <p className="font-semibold text-base text-foreground">{occurrence?.paciente_sexo || "Não informado"}</p>
             </div>
           </div>
         </div>

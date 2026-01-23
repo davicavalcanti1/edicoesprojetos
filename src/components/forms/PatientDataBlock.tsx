@@ -116,7 +116,7 @@ export function PatientDataBlock({ form }: PatientDataBlockProps) {
             <FormItem>
               <FormLabel className="flex items-center gap-2">
                 <Hash className="h-4 w-4 text-muted-foreground" />
-                ID do paciente <span className="text-destructive">*</span>
+                CPF / ID do paciente <span className="text-destructive">*</span>
               </FormLabel>
               <FormControl>
                 <Input
@@ -156,15 +156,6 @@ export function PatientDataBlock({ form }: PatientDataBlockProps) {
           options={["Masculino", "Feminino"]}
           icon={<User className="h-4 w-4 text-muted-foreground" />}
           className="md:col-span-1"
-        />
-
-        {/* Tipo de Exame */}
-        <FormSelect
-          name="paciente.tipoExame"
-          label="Tipo de exame realizado"
-          placeholder="Selecione o exame"
-          options={tiposExame}
-          icon={<Stethoscope className="h-4 w-4 text-muted-foreground" />}
         />
 
         {/* Unidade/Local */}

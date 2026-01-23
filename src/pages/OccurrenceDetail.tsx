@@ -416,7 +416,7 @@ export default function OccurrenceDetail() {
               )}
             </div>
             <div>
-              <p className="text-muted-foreground">ID</p>
+              <p className="text-muted-foreground">ID / Prontuário</p>
               {isAdmin ? (
                 <input
                   type="text"
