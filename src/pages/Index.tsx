@@ -16,7 +16,7 @@ export default function Index() {
 
   return (
     <MainLayout>
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-3xl relative min-h-[80vh]">
         {/* Header */}
         <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
           <h1 className="text-2xl font-bold text-foreground md:text-3xl">
@@ -30,75 +30,93 @@ export default function Index() {
 
         {/* Botões de Ação */}
         <section className="mb-10 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
-          <div className="flex flex-col gap-6">
-            {/* Ocorrência de Revisão de Laudo - Visible for Admin and User (Doctors/Techs) */}
+          <div className="grid gap-6">
+            {/* Ocorrências de revisão de laudo */}
             {(role === 'admin' || role === 'user') && (
               <Button
                 onClick={() => navigate("/ocorrencias/nova/assistencial/revisao_exame")}
                 size="lg"
-                className="w-full h-24 text-lg gap-3 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-lg transition-all hover:scale-[1.01]"
+                className="w-full h-24 text-lg gap-4 bg-blue-600 hover:bg-blue-700 shadow-lg transition-all hover:scale-[1.01] justify-start px-8"
               >
-                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-white/20">
+                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-white/20 shrink-0">
                   <Plus className="h-6 w-6" />
                 </div>
                 <div className="flex flex-col items-start text-left">
-                  <span className="font-bold text-xl">Ocorrência de Revisão de Laudo</span>
+                  <span className="font-bold text-xl">Ocorrências de revisão de laudo</span>
                   <span className="text-sm font-normal text-white/80">Registrar nova solicitação</span>
                 </div>
               </Button>
             )}
 
-            {/* Ocorrência de Enfermagem - Visible for Admin, User, and Enfermagem */}
-            {(role === 'admin' || role === 'user' || role === 'enfermagem') && (
-              <Button
-                onClick={() => navigate("/ocorrencias/nova/enfermagem")}
-                size="lg"
-                className="w-full h-24 text-lg gap-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-600/90 hover:to-teal-600/90 shadow-lg transition-all hover:scale-[1.01]"
-              >
-                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-white/20">
-                  <Plus className="h-6 w-6" />
-                </div>
-                <div className="flex flex-col items-start text-left">
-                  <span className="font-bold text-xl">Ocorrência de Enfermagem</span>
-                  <span className="text-sm font-normal text-white/80">Registrar extravasamento ou reação</span>
-                </div>
-              </Button>
-            )}
-
-            {/* Ocorrência Administrativa - Visible for Admin and RH */}
+            {/* Ocorrências administrativas */}
             {(role === 'admin' || role === 'rh') && (
               <Button
                 onClick={() => navigate("/ocorrencias/nova/administrativa")}
                 size="lg"
-                className="w-full h-24 text-lg gap-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-500/90 hover:to-yellow-500/90 shadow-lg transition-all hover:scale-[1.01]"
+                className="w-full h-24 text-lg gap-4 bg-blue-600 hover:bg-blue-700 shadow-lg transition-all hover:scale-[1.01] justify-start px-8"
               >
-                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-white/20">
+                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-white/20 shrink-0">
                   <Briefcase className="h-6 w-6" />
                 </div>
                 <div className="flex flex-col items-start text-left">
-                  <span className="font-bold text-xl">Ocorrência Administrativa</span>
+                  <span className="font-bold text-xl">Ocorrências administrativas</span>
                   <span className="text-sm font-normal text-white/80">Registrar ocorrência RH</span>
                 </div>
               </Button>
             )}
 
-            {/* Ocorrência Livre - Visible for All (or restricted if needed) */}
+            {/* Ocorrências da enfermagem */}
+            {(role === 'admin' || role === 'user' || role === 'enfermagem') && (
+              <Button
+                onClick={() => navigate("/ocorrencias/nova/enfermagem")}
+                size="lg"
+                className="w-full h-24 text-lg gap-4 bg-blue-600 hover:bg-blue-700 shadow-lg transition-all hover:scale-[1.01] justify-start px-8"
+              >
+                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-white/20 shrink-0">
+                  <Plus className="h-6 w-6" />
+                </div>
+                <div className="flex flex-col items-start text-left">
+                  <span className="font-bold text-xl">Ocorrências da enfermagem</span>
+                  <span className="text-sm font-normal text-white/80">Registrar extravasamento ou reação</span>
+                </div>
+              </Button>
+            )}
+
+            {/* Ocorrências não tabeladas */}
             <Button
               onClick={() => navigate("/ocorrencias/nova-livre")}
               size="lg"
-              className="w-full h-24 text-lg gap-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-600/90 hover:to-indigo-600/90 shadow-lg transition-all hover:scale-[1.01]"
+              className="w-full h-24 text-lg gap-4 bg-blue-600 hover:bg-blue-700 shadow-lg transition-all hover:scale-[1.01] justify-start px-8"
             >
-              <div className="flex items-center justify-center h-12 w-12 rounded-full bg-white/20">
+              <div className="flex items-center justify-center h-12 w-12 rounded-full bg-white/20 shrink-0">
                 <div className="h-6 w-6 text-white flex items-center justify-center font-bold">L</div>
               </div>
               <div className="flex flex-col items-start text-left">
-                <span className="font-bold text-xl">Ocorrência Livre</span>
+                <span className="font-bold text-xl">Ocorrências não tabeladas</span>
                 <span className="text-sm font-normal text-white/80">Registro manual flexível</span>
               </div>
             </Button>
-
           </div>
         </section>
+
+        {/* WhatsApp Support Button */}
+        <div className="fixed bottom-6 right-6 z-50 group">
+          <a
+            href="#"
+            onClick={(e) => e.preventDefault()}
+            className="flex items-center justify-center w-14 h-14 bg-green-500 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
+            title="Deseja contatar o suporte?"
+          >
+            <svg viewBox="0 0 24 24" fill="white" className="w-8 h-8">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.008-.57-.008-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+            </svg>
+          </a>
+
+          {/* Tooltip on Hover */}
+          <div className="absolute bottom-full right-0 mb-2 w-max px-3 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+            Deseja contatar o suporte?
+          </div>
+        </div>
       </div>
     </MainLayout>
   );
