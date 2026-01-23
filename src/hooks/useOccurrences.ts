@@ -58,6 +58,8 @@ export interface DbOccurrence {
   encaminhada_em: string | null;
   finalizada_em: string | null;
   dados_especificos: Record<string, any> | null;
+  origin?: string;
+  custom_type?: string;
   // Joined data
   criador_nome?: string;
   triador_nome?: string;
@@ -198,22 +200,23 @@ export function useOccurrence(id: string | undefined) {
 
       if (patientData) {
         // Map patient_occurrences to DbOccurrence structure
+        const pData = patientData as any;
         return {
-          id: patientData.id,
-          tenant_id: patientData.tenant_id,
-          protocolo: patientData.protocol,
+          id: pData.id,
+          tenant_id: pData.tenant_id,
+          protocolo: pData.protocol,
           tipo: 'assistencial', // Default to assistencial or create a 'paciente' type if supported
           subtipo: 'relato_paciente',
-          paciente_nome_completo: patientData.patient_name,
-          paciente_telefone: patientData.patient_phone,
-          paciente_data_nascimento: patientData.patient_birth_date,
+          paciente_nome_completo: pData.patient_name,
+          paciente_telefone: pData.patient_phone,
+          paciente_data_nascimento: pData.patient_birth_date,
           // Map other patient fields if they exist in table
-          descricao_detalhada: patientData.description,
-          status: (patientData.status === 'pendente' ? 'registrada' : patientData.status) || 'registrada',
-          criado_em: patientData.created_at,
-          atualizado_em: patientData.created_at,
-          criado_por: patientData.is_anonymous ? 'Anônimo' : 'Paciente',
-          criador_nome: patientData.is_anonymous ? 'Anônimo' : (patientData.patient_name || 'Paciente'),
+          descricao_detalhada: pData.description,
+          status: (pData.status === 'pendente' ? 'registrada' : pData.status) || 'registrada',
+          criado_em: pData.created_at,
+          atualizado_em: pData.created_at,
+          criado_por: pData.is_anonymous ? 'Anônimo' : 'Paciente',
+          criador_nome: pData.is_anonymous ? 'Anônimo' : (pData.patient_name || 'Paciente'),
           contem_dado_sensivel: false,
 
           // Defaults for required fields

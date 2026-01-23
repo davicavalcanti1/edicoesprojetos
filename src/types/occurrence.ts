@@ -223,6 +223,7 @@ export interface Occurrence extends OccurrenceFormData {
   pessoasEnvolvidas?: string;
   // Campos para acesso público
   publicToken?: string;
+  origin?: string;
 }
 
 // Status Change History
@@ -262,6 +263,7 @@ export const subtypesByType: Record<OccurrenceType, OccurrenceSubtype[]> = {
   enfermagem: ["extravasamento_enfermagem", "reacoes_adversas"],
   paciente: [],
   simples: [], // Generic text occurrence
+  livre: [],
 };
 
 // Triage Labels and Config
