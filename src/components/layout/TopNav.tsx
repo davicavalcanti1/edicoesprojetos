@@ -42,7 +42,7 @@ export function TopNav() {
   const navLinks = [
     { href: "/", label: "Início", icon: Home, adminOnly: false },
     { href: "/ocorrencias", label: "Ocorrências", icon: FileText, adminOnly: false },
-    { href: "/kanbans", label: "Kanbans", icon: Columns3, adminOnly: false },
+
     { href: "/analise", label: "Análise", icon: SlidersHorizontal, adminOnly: true },
     { href: "/relatorios", label: "Dashboard", icon: BarChart3, adminOnly: false },
     // Novo item Inspeções (Agrupa Dashboard e Relatórios de Chamados Operacionais)

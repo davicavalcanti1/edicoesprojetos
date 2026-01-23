@@ -1,6 +1,6 @@
 // Occurrence Types and Subtypes
 // "revisao_exame" is now a primary type along with "administrativa" and "enfermagem"
-export type OccurrenceType = "administrativa" | "revisao_exame" | "enfermagem" | "paciente" | "simples" | "livre";
+export type OccurrenceType = "administrativa" | "revisao_exame" | "enfermagem" | "paciente" | "simples" | "livre" | "assistencial" | "tecnica";
 
 type AdministrativaSubtype =
   | "faturamento"
@@ -235,6 +235,18 @@ interface StatusChange {
   motivo?: string;
 }
 
+// Type Labels
+export const typeLabels: Record<OccurrenceType, string> = {
+  assistencial: "Assistencial",
+  administrativa: "Administrativa",
+  tecnica: "Técnica",
+  revisao_exame: "Revisão de Exame",
+  enfermagem: "Enfermagem",
+  paciente: "Paciente",
+  simples: "Simples",
+  livre: "Livre",
+};
+
 // Subtype Labels
 export const subtypeLabels: Record<OccurrenceSubtype, string> = {
   revisao_exame: "Revisão de exame",
@@ -264,6 +276,8 @@ export const subtypesByType: Record<OccurrenceType, OccurrenceSubtype[]> = {
   paciente: [],
   simples: [], // Generic text occurrence
   livre: [],
+  assistencial: [],
+  tecnica: [],
 };
 
 // Triage Labels and Config

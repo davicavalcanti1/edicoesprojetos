@@ -221,71 +221,65 @@ export function RevisaoExameForm({ form, pendingFiles = [], onFilesChange }: Rev
             </Popover>
           </div>
 
-          <FormLabel>Data do exame</FormLabel>
-          <div className="flex gap-2">
-            <Input
-              type="text"
-              placeholder="DD/MM/YYYY"
-              value={dados.exameData ? format(new Date(dados.exameData), "dd/MM/yyyy") : ""}
-              onChange={(e) => {
-                // Allow manual typing/pasting
-                // We try to parse DD/MM/YYYY to YYYY-MM-DD for storage
-                const inputValue = e.target.value;
-                // Basic validation/formatting logic could go here, 
-                // but for now we just try to parse if it looks like a date
-                // or just store it if the backend accepts string. 
-                // Assuming backend expects YYYY-MM-DD based on previous type="date".
-
-                // If user is typing, we might strictly parse only valid dates
-                if (inputValue.length === 10) {
-                  const [day, month, year] = inputValue.split('/');
-                  if (day && month && year) {
-                    const date = new Date(`${year}-${month}-${day}`);
-                    if (!isNaN(date.getTime())) {
-                      updateDados("exameData", date.toISOString().split('T')[0]);
-                      return;
+          {/* Data do exame */}
+          <div className="space-y-2">
+            <FormLabel>Data do exame</FormLabel>
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                placeholder="DD/MM/YYYY"
+                value={dados.exameData ? format(new Date(dados.exameData), "dd/MM/yyyy") : ""}
+                onChange={(e) => {
+                  const inputValue = e.target.value;
+                  if (inputValue.length === 10) {
+                    const [day, month, year] = inputValue.split('/');
+                    if (day && month && year) {
+                      const date = new Date(`${year}-${month}-${day}`);
+                      if (!isNaN(date.getTime())) {
+                        updateDados("exameData", date.toISOString().split('T')[0]);
+                        return;
+                      }
                     }
                   }
-                }
-                // If clearing
-                if (inputValue === '') {
-                  updateDados("exameData", null);
-                }
-              }}
-              className="bg-background"
-            />
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-[240px] justify-start text-left font-normal px-3",
-                    !dados.exameData && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dados.exameData ? (
-                    format(new Date(dados.exameData), "dd 'de' MMMM 'de' yyyy", {
-                      locale: ptBR,
-                    })
-                  ) : (
-                    <span>Selecione uma data</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dados.exameData ? new Date(dados.exameData) : undefined}
-                  onSelect={(date) => {
-                    if (date) {
-                      updateDados("exameData", date.toISOString().split('T')[0]);
-                    }
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+                  if (inputValue === '') {
+                    updateDados("exameData", null);
+                  }
+                }}
+                className="bg-background"
+              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[240px] justify-start text-left font-normal px-3",
+                      !dados.exameData && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dados.exameData ? (
+                      format(new Date(dados.exameData), "dd 'de' MMMM 'de' yyyy", {
+                        locale: ptBR,
+                      })
+                    ) : (
+                      <span>Selecione uma data</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dados.exameData ? new Date(dados.exameData) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        updateDados("exameData", date.toISOString().split('T')[0]);
+                      }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           {/* Médico Responsável - Combobox com busca */}
