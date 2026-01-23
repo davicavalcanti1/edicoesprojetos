@@ -52,28 +52,23 @@ export default function BanheiroForm() {
             const protocolNum = await generateSecureProtocol();
             setProtocol(protocolNum);
 
-            // 2. Tenant
+            // 2. Tenant e User
+            const { data: { user } } = await supabase.auth.getUser();
             const { data: tenant } = await supabase.from('tenants').select('id').limit(1).maybeSingle();
             const tenantId = tenant?.id;
 
-            if (!tenantId) throw new Error("Erro configuração tenant");
-
-            // 3. Salvar no Supabase
-            const { error } = await supabase.from("occurrences").insert({
+            // 3. Salvar no Supabase (Maintenance Records)
+            // @ts-ignore
+            const { error } = await supabase.from("maintenance_records").insert({
                 protocolo: protocolNum,
-                tipo: "tecnica",
-                subtipo: "predial",
-                status: "registrada",
+                tipo_origem: "banheiro",
+                status: "aberto",
                 tenant_id: tenantId,
-                descricao_detalhada: `[Banheiro] ${params.localizacao} - ${values.problema}\n${values.descricao}`,
-                dados_especificos: {
-                    tipo: "banheiro",
-                    localizacao: params.localizacao,
-                    problema: values.problema,
-                    descricao: values.descricao
-                },
-                criado_em: new Date().toISOString(),
-                atualizado_em: new Date().toISOString()
+                criado_por: user?.id || null,
+
+                localizacao: params.localizacao,
+                defeito_descricao: values.problema,
+                descricao: `[Banheiro] ${params.localizacao} - ${values.problema}\n${values.descricao}`,
             });
 
             if (error) throw error;

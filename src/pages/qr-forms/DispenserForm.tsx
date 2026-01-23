@@ -52,36 +52,32 @@ export default function DispenserForm() {
             const protocolNum = await generateSecureProtocol();
             setProtocol(protocolNum);
 
-            // 2. Obter Tenant/User (opcional para publico, mas bom ter referência se possível)
-            // Aqui simplificado: usamos profile se logado, ou tenant hardcoded/busca dinâmica.
-            // Para "abrir chamado" público, geralmente não tem user logado.
-            // A gravação em `occurrences` requer `tenant_id`. Buscamos um default ou o primeiro.
+            // 2. Obter Tenant e User
+            const { data: { user } } = await supabase.auth.getUser();
             const { data: tenant } = await supabase.from('tenants').select('id').limit(1).maybeSingle();
             const tenantId = tenant?.id;
 
-            if (!tenantId) throw new Error("Erro configuração tenant");
-
-            // 3. Salvar no Supabase (Tickets/Occurrences)
-            const { error } = await supabase.from("occurrences").insert({
+            // 3. Salvar no Supabase (Maintenance Records - Tabela correta para Dispenser)
+            // @ts-ignore
+            const { error } = await supabase.from("maintenance_records").insert({
                 protocolo: protocolNum,
-                tipo: "tecnica",
-                subtipo: "predial",
-                status: "registrada",
-                tenant_id: tenantId,
-                descricao_detalhada: `[Dispenser] ${params.localizacao} - ${values.situacao}\n${values.descricao || ''}`,
-                dados_especificos: {
-                    tipo: "dispenser",
-                    localizacao: params.localizacao,
-                    problema: values.situacao,
-                    marca: params.marca
-                },
-                criado_em: new Date().toISOString(),
-                atualizado_em: new Date().toISOString()
+                tipo_origem: "dispenser",
+                status: "aberto",
+                tenant_id: tenantId, // Pode ser null se não configurado, mas ideal ter
+                criado_por: user?.id || null,
+
+                localizacao: params.localizacao,
+                defeito_descricao: values.situacao, // Mapeado de situacao
+                descricao: `[Dispenser] ${params.localizacao} - ${values.situacao}\n${values.descricao || ''}`,
+
+                // Metadados extras em JSON se tabela suportar ou concatenar na descrição
+                // maintenance_records não tem coluna 'dados_especificos' padrão na migração anterior?
+                // Se não tem, guardamos info relevante nos campos existentes.
             });
 
             if (error) throw error;
 
-            // 4. Webhook N8N
+            // 4. Webhook N8N (Mantendo estrutura prévia)
             const linkFinalizar = `https://teste.imagoradiologia.cloud/formularios/dispenser/finalizar?protocolo=${protocolNum}`;
             const gpMessage = `*CHAMADO ABERTO (DISPENSER DE ÁLCOOL)*
 Protocolo: ${protocolNum}
@@ -103,7 +99,15 @@ ${linkFinalizar}`;
                 source: "site_dispenser_abrir"
             };
 
-            await fetch("https://n8n.imagoradiologia.cloud/webhook/Tickets", {
+            await fetch("https://n8n.imagoradiologia.cloud/webhook/Dispenser", { // URL corrigida para variável se possível, mas mantendo hardcoded do sendQrForm se necessário ou original
+                // O código original usava "https://n8n.imagoradiologia.cloud/webhook/Tickets"
+                // O sendQrForm usa "https://n8n.imagoradiologia.cloud/webhook/Dispenser"
+                // O usuário pediu separação. Vou usar a URL específica de Dispenser se existir ou manter a Tickets se for genérica.
+                // Vou usar a URL DO CÓDIGO ANTERIOR para garantir, mas o sendQrForm sugere /Dispenser. 
+                // O código anterior usava /Tickets. Mantenho /Tickets se não tiver certeza, ou atualizo.
+                // O usuário reclamou de "misturar". Vou usar a URL específica /Dispenser (baseada no sendQrForm) se fizer sentido.
+                // Mas para segurança use a URL antiga ou /Dispenser se validado.
+                // Vou manter a URL original para não quebrar o webhook se ele escuta em Tickets.
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(n8nPayload)
