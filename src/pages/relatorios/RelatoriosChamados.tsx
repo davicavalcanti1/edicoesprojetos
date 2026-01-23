@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Loader2, Download, Search, Eye, FileText } from "lucide-react";
 import { startOfDay, endOfDay, subDays, startOfMonth, format, parseISO } from "date-fns";
 
-export default function RelatoriosChamados({ typeFilter, embedded }: { typeFilter?: 'ar_condicionado' | 'dispenser' | 'banheiro' | undefined, embedded?: boolean }) {
+export default function RelatoriosChamados({ typeFilter, embedded, excludeTypes }: { typeFilter?: 'ar_condicionado' | 'dispenser' | 'banheiro' | undefined, embedded?: boolean, excludeTypes?: string[] }) {
     // Filtros
     const [periodo, setPeriodo] = useState("30dias");
     const [dataInicio, setDataInicio] = useState("");
@@ -32,7 +32,7 @@ export default function RelatoriosChamados({ typeFilter, embedded }: { typeFilte
 
     useEffect(() => {
         carregarDados();
-    }, [periodo, dataInicio, dataFim, filtroTipo, filtroStatus, typeFilter]); // Busca dispara no reload mas filtro de texto é local ou debounce? Faremos query no fetch para filtros pesados
+    }, [periodo, dataInicio, dataFim, filtroTipo, filtroStatus, typeFilter, excludeTypes]); // Busca dispara no reload mas filtro de texto é local ou debounce? Faremos query no fetch para filtros pesados
 
     const getIntervalo = () => {
         const hoje = new Date();
@@ -78,6 +78,11 @@ export default function RelatoriosChamados({ typeFilter, embedded }: { typeFilte
 
             if (effectiveType) {
                 query = query.eq("tipo_chamado", effectiveType);
+            }
+
+            if (excludeTypes && excludeTypes.length > 0) {
+                const filterStr = `(${excludeTypes.map(t => `"${t}"`).join(',')})`;
+                query = query.not('tipo_chamado', 'in', filterStr);
             }
 
             if (filtroStatus === "abertos") {

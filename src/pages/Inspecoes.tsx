@@ -15,11 +15,11 @@ const FilteredDashboardWrapper = ({ type }: { type?: 'ar_condicionado' | 'dispen
     // If the DashboardChamados supports filtering by props, we pass it. 
     // currently it reads from DB view which has "tipo_chamado".
     // We'll need to update DashboardChamados to accept a filter prop or we filter in client side there.
-    return <DashboardChamados typeFilter={type} embedded={true} />;
+    return <DashboardChamados typeFilter={type} embedded={true} excludeTypes={['revisao_exame']} />;
 };
 
 const FilteredRelatoriosWrapper = ({ type }: { type?: 'ar_condicionado' | 'dispenser' | 'banheiro' | undefined }) => {
-    return <RelatoriosChamados typeFilter={type} embedded={true} />;
+    return <RelatoriosChamados typeFilter={type} embedded={true} excludeTypes={['revisao_exame']} />;
 }
 
 

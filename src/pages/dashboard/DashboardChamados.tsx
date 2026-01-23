@@ -14,7 +14,7 @@ import { ptBR } from "date-fns/locale";
 // Cores para gráficos
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
-export default function DashboardChamados({ typeFilter, embedded }: { typeFilter?: 'ar_condicionado' | 'dispenser' | 'banheiro' | undefined, embedded?: boolean }) {
+export default function DashboardChamados({ typeFilter, embedded, excludeTypes }: { typeFilter?: 'ar_condicionado' | 'dispenser' | 'banheiro' | undefined, embedded?: boolean, excludeTypes?: string[] }) {
     // Estados de Filtro
     const [periodo, setPeriodo] = useState("hoje");
     const [dataInicio, setDataInicio] = useState("");
@@ -36,7 +36,7 @@ export default function DashboardChamados({ typeFilter, embedded }: { typeFilter
     // Ao montar ou mudar filtros
     useEffect(() => {
         carregarDados();
-    }, [periodo, dataInicio, dataFim, typeFilter]);
+    }, [periodo, dataInicio, dataFim, typeFilter, excludeTypes]);
 
     const getIntervalo = () => {
         const hoje = new Date();
@@ -77,6 +77,12 @@ export default function DashboardChamados({ typeFilter, embedded }: { typeFilter
 
             if (typeFilter) {
                 query = query.eq("tipo_chamado", typeFilter);
+            }
+
+            if (excludeTypes && excludeTypes.length > 0) {
+                // Format for PostgREST: ("val1","val2")
+                const filterStr = `(${excludeTypes.map(t => `"${t}"`).join(',')})`;
+                query = query.not('tipo_chamado', 'in', filterStr);
             }
 
             const { data, error } = await query;
