@@ -248,3 +248,15 @@ export const subtypesByType: Record<OccurrenceType, OccurrenceSubtype[]> = {
   tecnica: [],
   assistencial: []
 };
+
+// Add subtype labels for display
+export const subtypeLabels: Record<string, string> = {
+  revisao_exame: "Revisão de Exame",
+  extravasamento_enfermagem: "Extravasamento (Enf)",
+  reacoes_adversas: "Reações Adversas",
+  faturamento: "Faturamento",
+  agendamento: "Agendamento",
+  paciente_outros: "Outros (Paciente)",
+  livre_outros: "Outros (Livre)",
+  // Add other legacy mappings if needed
+};
