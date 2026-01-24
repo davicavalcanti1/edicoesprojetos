@@ -66,67 +66,45 @@ export default function Ocorrencias() {
   const [dateStart, setDateStart] = useState<Date | undefined>();
   const [dateEnd, setDateEnd] = useState<Date | undefined>();
 
-  // Use queries unconditionally (hooks handle their own enabled state internally or return empty)
-  // We enable staling to prevent loop
-  const { data: assistencialData = [], isLoading: loadAssistencial } = useOccurrences();
-  const { data: adminData = [], isLoading: loadAdmin } = useAdministrativeOccurrences();
-  const { data: nursingData = [], isLoading: loadNursing } = useNursingOccurrences();
-  const { data: patientData = [], isLoading: loadPatient } = usePatientOccurrencesList();
+  const { data: allOccurrences = [], isLoading: isDataLoading } = useOccurrences();
 
   // Unified Data Merging
   const unifiedData = useMemo(() => {
-    let combined: any[] = [];
+    return allOccurrences.map((item) => {
+      let normalizedType = item.tipo;
+      let sourceOrigin = 'assistencial'; // Default
 
-    // Helper to normalize
-    const normalize = (item: any, source: string, type: string) => ({
-      ...item,
-      normalizedType: type,
-      sourceOrigin: source,
-      searchString: [
-        item.protocolo,
-        item.protocol,
-        item.paciente_nome_completo,
-        item.patient_name,
-        item.employee_name,
-        item.description,
-        item.descricao_detalhada
-      ].filter(Boolean).join(" ").toLowerCase()
+      if (item.original_table === 'ocorrencias_adm') {
+        sourceOrigin = 'admin';
+        normalizedType = 'administrativa';
+      } else if (item.original_table === 'ocorrencias_enf') {
+        sourceOrigin = 'nursing';
+        normalizedType = 'enfermagem';
+      } else if (item.original_table === 'ocorrencias_laudo') {
+        sourceOrigin = 'assistencial';
+        normalizedType = 'revisao_exame';
+      } else if (item.original_table === 'occurrences') {
+        sourceOrigin = item.tipo === 'paciente' ? 'paciente' : 'livre';
+      }
+
+      return {
+        ...item,
+        normalizedType,
+        sourceOrigin,
+        searchString: [
+          item.protocolo,
+          item.paciente_nome,
+          item.descricao,
+          // Add other specific fields if they exist in raw_data
+          (item.raw_data as any)?.patient_name,
+          (item.raw_data as any)?.employee_name,
+          (item.raw_data as any)?.descricao_detalhada
+        ].filter(Boolean).join(" ").toLowerCase()
+      };
     });
+  }, [allOccurrences]);
 
-    // Assistencial
-    assistencialData.forEach(item => {
-      let t = item.tipo === 'assistencial' ? 'revisao_exame' : item.tipo;
-      combined.push(normalize(item, 'assistencial', t));
-    });
-
-    // Admin
-    if (role === 'admin' || role === 'rh') {
-      adminData.forEach(item => {
-        combined.push(normalize(item, 'admin', 'administrativa'));
-      });
-    }
-
-    // Nursing
-    if (role === 'admin' || role === 'enfermagem' || role === 'user') {
-      nursingData.forEach(item => {
-        combined.push(normalize(item, 'nursing', 'enfermagem'));
-      });
-    }
-
-    // Patient
-    // (If patient data is separate)
-    patientData.forEach(item => {
-      combined.push(normalize(item, 'paciente', 'paciente'));
-    });
-
-    return combined.sort((a, b) => {
-      const dateA = new Date(a.criado_em || a.created_at || 0).getTime();
-      const dateB = new Date(b.criado_em || b.created_at || 0).getTime();
-      return dateB - dateA;
-    });
-  }, [assistencialData, adminData, nursingData, patientData, role]);
-
-  // Filtering
+  // Filters
   const filteredData = useMemo(() => {
     return unifiedData.filter(item => {
       // 1. Search
@@ -154,20 +132,20 @@ export default function Ocorrencias() {
 
       // 5. CPF (Specific check)
       if (cpfFilter) {
-        const pid = item.paciente_id || item.patient_id;
+        const pid = item.paciente_id || (item.raw_data as any)?.patient_id;
         if (!pid || !pid.includes(cpfFilter)) return false;
       }
 
       // 6. Exam ID / Protocol
       if (examIdFilter) {
-        const proto = item.protocolo || item.protocol || "";
-        const exam = item.paciente_tipo_exame || "";
+        const proto = item.protocolo || "";
+        const exam = (item.raw_data as any)?.paciente_tipo_exame || "";
         if (!proto.includes(examIdFilter) && !exam.includes(examIdFilter)) return false;
       }
 
       // 7. Date
       if (dateStart || dateEnd) {
-        const d = new Date(item.criado_em || item.created_at);
+        const d = new Date(item.criado_em);
         if (dateStart && d < dateStart) return false;
         if (dateEnd) {
           const endOfDay = new Date(dateEnd);
@@ -180,37 +158,25 @@ export default function Ocorrencias() {
     });
   }, [unifiedData, searchTerm, statusFilter, typeFilter, triageFilter, cpfFilter, examIdFilter, dateStart, dateEnd]);
 
-  // Loading Calculation
-  // Only show full page loader if Auth is loading. Data loading shows partial state.
-  if (isAuthLoading) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center h-[calc(100vh-200px)]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </MainLayout>
-    );
-  }
-
-  // Determine if *relevant* data is loading to show a smaller indicator
-  const isDataLoading = loadAssistencial || loadAdmin || loadNursing || loadPatient;
-
   // Handlers
   const handleNavigate = (item: any) => {
-    if (item.sourceOrigin === 'assistencial' || item.normalizedType === 'livre' || item.sourceOrigin === 'paciente') {
-      navigate(`/ocorrencias/${item.id}`);
-    } else if (item.sourceOrigin === 'nursing') {
+    if (item.original_table === 'ocorrencias_enf') {
       navigate(`/ocorrencias/enfermagem/${item.id}`);
-    } else if (item.sourceOrigin === 'admin') {
+    } else if (item.original_table === 'ocorrencias_adm') {
       navigate(`/ocorrencias/admin/${item.id}`);
+    } else {
+      // assistencial, occurrences (livre, paciente), laudo
+      navigate(`/ocorrencias/${item.id}`);
     }
   };
 
   const handleDownloadPdf = (item: any) => {
-    if (item.sourceOrigin === 'admin') {
-      downloadAdminOccurrencePDF(item);
+    if (item.original_table === 'ocorrencias_adm') {
+      // Map back to format expected by PDF generator if needed
+      downloadAdminOccurrencePDF(item.raw_data);
     } else {
-      let data = { ...item };
+      let data = { ...item.raw_data };
+      // Normalization for PDF generator which expects specific fields
       if (!data.paciente && (data.patient_name || data.employee_name)) {
         data.paciente = {
           nomeCompleto: data.patient_name || data.employee_name,
@@ -381,8 +347,8 @@ export default function Ocorrencias() {
                   >
                     <TableCell className="font-mono text-primary font-medium">
                       <div className="flex items-center gap-2">
-                        {item.protocolo || item.protocol || "-"}
-                        {item.origin === 'whatsapp' && (
+                        {item.protocolo || (item.raw_data as any).protocol || "-"}
+                        {(item.raw_data as any).origin === 'whatsapp' && (
                           <span className="inline-flex items-center justify-center w-5 h-5 bg-green-100 text-green-600 rounded-full" title="Via WhatsApp">
                             <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.008-.57-.008-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" /></svg>
                           </span>
@@ -391,16 +357,16 @@ export default function Ocorrencias() {
                     </TableCell>
                     <TableCell>
                       {item.normalizedType === 'administrativa' ? (
-                        <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">{item.category}</Badge>
+                        <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">{item.subtipo || (item.raw_data as any).category}</Badge>
                       ) : item.normalizedType === 'enfermagem' ? (
-                        <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">{item.subtype}</Badge>
+                        <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">{item.subtipo}</Badge>
                       ) : (
-                        <Badge variant="secondary" className="font-normal">{typeLabels[item.normalizedType] || item.normalizedType}</Badge>
+                        <Badge variant="secondary" className="font-normal">{typeLabels[item.normalizedType as keyof typeof typeLabels] || item.normalizedType}</Badge>
                       )}
-                      {item.custom_type && <Badge variant="outline" className="ml-2 border-purple-200 text-purple-700">{item.custom_type}</Badge>}
+                      {(item.raw_data as any).custom_type && <Badge variant="outline" className="ml-2 border-purple-200 text-purple-700">{(item.raw_data as any).custom_type}</Badge>}
                     </TableCell>
                     <TableCell className="text-foreground/80 font-medium">
-                      {item.paciente_nome_completo || item.employee_name || item.patient_name || item.person_name || "Não informado"}
+                      {item.paciente_nome || (item.raw_data as any).employee_name || (item.raw_data as any).patient_name || (item.raw_data as any).person_name || "Não informado"}
                     </TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${statusConfig[item.status as OccurrenceStatus]?.bgColor || "bg-gray-100"} ${statusConfig[item.status as OccurrenceStatus]?.color || "text-gray-800"}`}>
@@ -415,7 +381,7 @@ export default function Ocorrencias() {
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground tabular-nums text-right">
-                      {format(new Date(item.criado_em || item.created_at), "dd/MM/yyyy")}
+                      {format(new Date(item.criado_em), "dd/MM/yyyy")}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">

@@ -8,7 +8,7 @@ import type { OccurrenceStatus, TriageClassification, OutcomeType } from "@/type
 export interface UnifiedOccurrence {
   id: string;
   protocolo: string;
-  tipo: 'administrativa' | 'enfermagem' | 'revisao_laudo';
+  tipo: string; // Allow string to accept all mapped types
   subtipo?: string;
   status: string;
   descricao: string;
@@ -17,6 +17,7 @@ export interface UnifiedOccurrence {
 
   // Normalized fields for UI display
   paciente_nome?: string;
+  paciente_id?: string;
   triagem?: string;
 
   original_table: string;
@@ -32,16 +33,18 @@ export function useOccurrences() {
   return useQuery({
     queryKey: ["occurrences-unified", profile?.tenant_id],
     queryFn: async () => {
-      // Fetch 3 main tables in parallel
-      const [admRes, enfRes, laudoRes] = await Promise.all([
+      // Fetch 4 tables in parallel (Admin, Enf, Laudo, and General/Patient)
+      const [admRes, enfRes, laudoRes, generalRes] = await Promise.all([
         supabase.from("ocorrencias_adm" as any).select("*").order("criado_em", { ascending: false }),
         supabase.from("ocorrencias_enf" as any).select("*").order("criado_em", { ascending: false }),
         supabase.from("ocorrencias_laudo" as any).select("*").order("criado_em", { ascending: false }),
+        supabase.from("occurrences").select("*").order("criado_em", { ascending: false }),
       ]);
 
       if (admRes.error) throw admRes.error;
       if (enfRes.error) throw enfRes.error;
       if (laudoRes.error) throw laudoRes.error;
+      if (generalRes.error) throw generalRes.error;
 
       // Normalize Admin
       const administrative = (admRes.data || []).map((item: any) => ({
@@ -76,8 +79,8 @@ export function useOccurrences() {
       const laudo = (laudoRes.data || []).map((item: any) => ({
         id: item.id,
         protocolo: item.protocolo,
-        tipo: 'revisao_laudo' as const,
-        subtipo: 'revisao',
+        tipo: 'revisao_exame' as const,
+        subtipo: 'revisao_exame',
         status: item.status,
         descricao: item.descricao_solicitacao,
         criado_em: item.criado_em,
@@ -87,7 +90,14 @@ export function useOccurrences() {
         raw_data: item
       }));
 
-      const combined = [...administrative, ...nursing, ...laudo];
+      // Normalize General (Patient/Livre)
+      const general = (generalRes.data || []).map((item: any) => ({
+        ...item,
+        original_table: 'occurrences',
+        raw_data: item
+      }));
+
+      const combined = [...administrative, ...nursing, ...laudo, ...general];
       return combined.sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime()) as UnifiedOccurrence[];
     },
     enabled: !!profile?.tenant_id,
