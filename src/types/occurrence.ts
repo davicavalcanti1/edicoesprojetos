@@ -275,3 +275,14 @@ export const subtypeLabels: Record<string, string> = {
   livre_outros: "Outros (Livre)",
   // Add other legacy mappings if needed
 };
+
+// Add subtype descriptions
+export const subtypeDescriptions: Record<string, string> = {
+  revisao_exame: "Solicitar revisão de laudo ou imagem.",
+  extravasamento_enfermagem: "Extravasamento de contraste ou medicação.",
+  reacoes_adversas: "Reações adversas a medicamentos ou contrastes.",
+  faturamento: "Erros ou dúvidas de faturamento.",
+  agendamento: "Problemas com agendamento de exames.",
+  paciente_outros: "Outras ocorrências relatadas pelo paciente.",
+  livre_outros: "Outras ocorrências diversas.",
+};
