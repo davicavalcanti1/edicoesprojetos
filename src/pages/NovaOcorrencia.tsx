@@ -12,15 +12,20 @@ import { PatientDataBlock } from "@/components/forms/PatientDataBlock";
 import { OccurrenceDetailsBlock } from "@/components/forms/OccurrenceDetailsBlock";
 import { useToast } from "@/hooks/use-toast";
 import { OccurrenceType, OccurrenceSubtype } from "@/types/occurrence";
-import { useCreateOccurrence } from "@/hooks/useOccurrences";
+import {
+  useCreateAdminOccurrence,
+  useCreateNursingOccurrence,
+  useCreateMedicalOccurrence,
+  useCreateGenericOccurrence
+} from "@/hooks/useOccurrences";
 
-const typeConfig: Record<OccurrenceType, {
+const typeConfig: Partial<Record<OccurrenceType, {
   title: string;
   description: string;
   icon: typeof Heart;
   color: string;
   bgColor: string;
-}> = {
+}>> = {
   administrativa: {
     title: "Ocorrência Administrativa",
     description: "Problemas operacionais e de gestão",
@@ -62,7 +67,7 @@ const formSchema = z.object({
       required_error: "Sexo é obrigatório",
     }),
   }),
-  tipo: z.enum(["administrativa", "revisao_exame", "enfermagem"]),
+  tipo: z.string(), // z.enum(["administrativa", "revisao_exame", "enfermagem", "livre", "paciente"]) simplified
   subtipo: z.string().min(1, "Subtipo é obrigatório"),
   descricaoDetalhada: z.string().min(20, "Descrição deve ter pelo menos 20 caracteres"),
   acaoImediata: z.string().min(10, "Descreva a ação tomada"),
@@ -76,11 +81,15 @@ type FormData = z.infer<typeof formSchema>;
 
 export default function NovaOcorrencia() {
   const [searchParams] = useSearchParams();
-  const tipo = searchParams.get("tipo");
+  const tipo = searchParams.get("tipo") as OccurrenceType;
   const subtipo = searchParams.get("subtipo");
   const navigate = useNavigate();
   const { toast } = useToast();
-  const createOccurrence = useCreateOccurrence();
+
+  const createAdmin = useCreateAdminOccurrence();
+  const createNursing = useCreateNursingOccurrence();
+  const createMedical = useCreateMedicalOccurrence();
+  const createGeneric = useCreateGenericOccurrence();
 
   const config = tipo ? typeConfig[tipo as keyof typeof typeConfig] : null;
 
@@ -97,7 +106,7 @@ export default function NovaOcorrencia() {
         dataHoraEvento: "",
         sexo: undefined,
       },
-      tipo: (tipo as OccurrenceType) || "revisao_exame",
+      tipo: tipo || "revisao_exame",
       subtipo: subtipo || "",
       descricaoDetalhada: "",
       acaoImediata: "",
@@ -121,29 +130,47 @@ export default function NovaOcorrencia() {
     );
   }
 
+  const isPending = createAdmin.isPending || createNursing.isPending || createMedical.isPending || createGeneric.isPending;
+
   const onSubmit = async (data: FormData) => {
     try {
-      await createOccurrence.mutateAsync({
-        tipo: data.tipo as OccurrenceType,
-        subtipo: data.subtipo as OccurrenceSubtype,
-        paciente_nome_completo: data.paciente.nomeCompleto,
-        paciente_telefone: data.paciente.telefone,
-        paciente_id: data.paciente.idPaciente,
-        paciente_data_nascimento: data.paciente.dataNascimento,
-        paciente_tipo_exame: data.paciente.tipoExame,
-        paciente_unidade_local: data.paciente.unidadeLocal,
-        paciente_data_hora_evento: data.paciente.dataHoraEvento,
-        paciente_sexo: data.paciente.sexo,
-        descricao_detalhada: data.descricaoDetalhada,
-        acao_imediata: data.acaoImediata,
-        impacto_percebido: data.impactoPercebido,
-        pessoas_envolvidas: data.pessoasEnvolvidas,
-        contem_dado_sensivel: data.contemDadoSensivel,
-      });
+      const commonData = {
+        descricao: data.descricaoDetalhada,
+        subtipo: data.subtipo,
+        paciente: data.paciente,
+        dadosEspecificos: {
+          acao_imediata: data.acaoImediata,
+          impacto_percebido: data.impactoPercebido,
+          pessoas_envolvidas: data.pessoasEnvolvidas,
+          contem_dado_sensivel: data.contemDadoSensivel
+        }
+      };
 
-      navigate("/ocorrencias");
+      if (data.tipo === "administrativa") {
+        await createAdmin.mutateAsync({
+          titulo: "Nova Ocorrência Administrativa",
+          categoria: data.subtipo,
+          ...commonData
+        });
+      } else if (data.tipo === "enfermagem") {
+        await createNursing.mutateAsync({
+          conduta: data.acaoImediata,
+          ...commonData
+        });
+      } else if (data.tipo === "revisao_exame") {
+        await createMedical.mutateAsync({
+          motivo: "Solicitação via Web",
+          ...commonData
+        });
+      } else {
+        await createGeneric.mutateAsync({
+          tipo: data.tipo,
+          ...commonData
+        });
+      }
+      // Success is handled by the hooks
     } catch (error) {
-      // Error is handled by the mutation
+      console.error(error);
     }
   };
 
@@ -184,10 +211,10 @@ export default function NovaOcorrencia() {
               </Button>
               <Button
                 type="submit"
-                disabled={createOccurrence.isPending}
+                disabled={isPending}
                 className="flex-1 sm:flex-none sm:min-w-[200px]"
               >
-                {createOccurrence.isPending ? (
+                {isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Registrando...
