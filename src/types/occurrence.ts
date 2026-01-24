@@ -125,19 +125,34 @@ export interface DbOccurrence extends Occurrence {
 // CONFIGS
 // ==============================================================================
 
-export const statusConfig: Record<OccurrenceStatus, { label: string; color: string; bgColor: string }> = {
-  registrada: { label: "Registrada", color: "text-blue-700", bgColor: "bg-blue-50" },
+export const statusConfig: Record<OccurrenceStatus, { label: string; description?: string; color: string; bgColor: string }> = {
+  registrada: { label: "Registrada", description: "Ocorrência registrada e aguardando triagem.", color: "text-blue-700", bgColor: "bg-blue-50" },
   pendente: { label: "Pendente", color: "text-blue-700", bgColor: "bg-blue-50" }, // Alias for registrada
-  em_triagem: { label: "Em Triagem", color: "text-yellow-700", bgColor: "bg-yellow-50" },
-  em_analise: { label: "Em Análise", color: "text-purple-700", bgColor: "bg-purple-50" },
+  em_triagem: { label: "Em Triagem", description: "Ocorrência em processo de triagem.", color: "text-yellow-700", bgColor: "bg-yellow-50" },
+  em_analise: { label: "Em Análise", description: "Ocorrência em análise detalhada.", color: "text-purple-700", bgColor: "bg-purple-50" },
   analise_tecnica: { label: "Análise Técnica", color: "text-purple-700", bgColor: "bg-purple-50" },
   em_revisao: { label: "Em Revisão", color: "text-purple-700", bgColor: "bg-purple-50" },
-  acao_em_andamento: { label: "Ação em Andamento", color: "text-orange-700", bgColor: "bg-orange-50" },
-  concluida: { label: "Concluída", color: "text-green-700", bgColor: "bg-green-50" },
+  acao_em_andamento: { label: "Ação em Andamento", description: "Ações sendo executadas.", color: "text-orange-700", bgColor: "bg-orange-50" },
+  concluida: { label: "Concluída", description: "Ocorrência finalizada.", color: "text-green-700", bgColor: "bg-green-50" },
   corrigido: { label: "Corrigido", color: "text-green-700", bgColor: "bg-green-50" },
   mantido: { label: "Mantido", color: "text-gray-700", bgColor: "bg-gray-50" },
-  improcedente: { label: "Improcedente", color: "text-gray-700", bgColor: "bg-gray-100" },
+  improcedente: { label: "Improcedente", description: "Ocorrência considerada improcedente.", color: "text-gray-700", bgColor: "bg-gray-100" },
   cancelado: { label: "Cancelado", color: "text-red-700", bgColor: "bg-red-50" },
+};
+
+export const statusTransitions: Record<OccurrenceStatus, OccurrenceStatus[]> = {
+  registrada: ["em_triagem", "improcedente"],
+  em_triagem: ["em_analise", "improcedente"],
+  em_analise: ["acao_em_andamento", "concluida", "improcedente"],
+  acao_em_andamento: ["concluida"],
+  concluida: [], // Terminal state
+  improcedente: [], // Terminal state
+  pendente: ["em_revisao", "cancelado"],
+  em_revisao: ["corrigido", "mantido"],
+  corrigido: [],
+  mantido: [],
+  cancelado: [],
+  analise_tecnica: ["concluida"]
 };
 
 export const triageConfig: Record<TriageClassification, { label: string; description: string; color: string; bgColor: string; level: number }> = {
