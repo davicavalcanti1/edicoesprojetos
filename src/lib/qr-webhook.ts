@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import { QrWebhookPayload } from "@/types/qr-forms";
-import { generateProtocol } from "./protocol-utils";
 
 const N8N_URLS = {
     dispenser: "https://n8n.imagoradiologia.cloud/webhook/Dispenser",
@@ -47,14 +46,9 @@ export async function sendQrForm(payload: QrWebhookPayload): Promise<boolean> {
     try {
         console.log("Iniciando envio do formulário QR:", payload);
 
-        // 1. Gerar Protocolo Único
-        const protocol = generateProtocol();
-        console.log("Protocolo gerado:", protocol);
-
-        // 2. Obter usuário atual (necessário para salvar no Supabase)
+        // 1. Obter usuário atual
         const { data: { user } } = await supabase.auth.getUser();
 
-        // Se não houver usuário logado, tentaremos buscar um tenant padrão ou falhar.
         let tenantId = null;
         let userId = user?.id;
 
@@ -66,44 +60,60 @@ export async function sendQrForm(payload: QrWebhookPayload): Promise<boolean> {
                 .single();
             tenantId = profile?.tenant_id;
         } else {
-            console.warn("Usuário não logado. Tentando salvar sem user_id.");
             const { data: tenant } = await supabase.from('tenants').select('id').limit(1).single();
             tenantId = tenant?.id;
         }
 
-        // 3. Salvar no Supabase (Tabela de Chamados / maintenance_records)
-        const maintenanceData = {
-            protocolo: protocol,
-            tipo_origem: payload.tipo, // 'ar_condicionado', 'banheiro', 'dispenser'
-            subtipo: payload.tipo,     // redundante mas útil
+        if (!tenantId) {
+            throw new Error("Tenant ID não encontrado.");
+        }
+
+        let tableName = "";
+        let insertData: any = {
+            tenant_id: tenantId,
             localizacao: payload.localizacao,
-
-            // Campos de metadados específicos se houver
-            sala: payload.metadata?.sala || null,
-            modelo: payload.metadata?.modelo || null,
-            numero_serie: payload.metadata?.numero_serie || null,
-
-            // Descrição e Status
-            descricao: payload.dados_usuario.descricao || JSON.stringify(payload.dados_usuario),
-            status: "aberto",
-
-            // Auditoria
-            criado_por: userId,
-            // responsavel: null, // Será atribuído depois
-            // data_manutencao: null, // Será preenchido na execução
-
-            fotos: []
+            status: 'aberto',
+            criado_por: userId || null,
+            solicitante_info: userId ? null : valuesToGuestInfo(payload.dados_usuario)
         };
 
-        // @ts-ignore
-        const { error: dbError } = await supabase.from("maintenance_records").insert(maintenanceData);
+        // Table routing
+        switch (payload.tipo) {
+            case 'ar_condicionado':
+                tableName = "chamados_ar_condicionado";
+                insertData.descricao = payload.dados_usuario.descricao || "Manutenção AC";
+                insertData.modelo = payload.metadata?.modelo;
+                insertData.numero_serie = payload.metadata?.numero_serie;
+                insertData.tag_equipamento = payload.metadata?.tag;
+                break;
+            case 'dispenser':
+                tableName = "chamados_dispenser";
+                insertData.tipo_insumo = payload.metadata?.tipo_insumo || "Geral";
+                insertData.problema = payload.dados_usuario.situacao;
+                break;
+            case 'banheiro':
+                tableName = "chamados_banheiro";
+                insertData.problema = payload.dados_usuario.problema;
+                insertData.observacao = payload.dados_usuario.descricao;
+                break;
+            default:
+                throw new Error("Tipo de formulário não suportado para envio direto.");
+        }
+
+        // 3. Insert and Get Protocol
+        const { data, error: dbError } = await supabase
+            .from(tableName as any)
+            .insert(insertData)
+            .select("protocolo")
+            .single();
 
         if (dbError) {
-            console.error("Erro ao salvar no Supabase (maintenance_records):", dbError);
+            console.error(`Erro ao salvar no Supabase (${tableName}):`, dbError);
             throw new Error(`Erro ao salvar no banco de dados: ${dbError.message}`);
         }
 
-        console.log("Salvo no Supabase com sucesso.");
+        const protocol = (data as any).protocolo;
+        console.log("Chamado criado com sucesso. Protocolo:", protocol);
 
         // 4. Enviar para N8N (Apenas Dispenser e Banheiro)
         if (payload.tipo === "dispenser" || payload.tipo === "banheiro") {
@@ -111,8 +121,6 @@ export async function sendQrForm(payload: QrWebhookPayload): Promise<boolean> {
 
             if (webhookUrl) {
                 const gpMessage = formatGpMessage(payload, protocol);
-
-                // Event type específico conforme solicitado
                 const eventType = payload.tipo === "banheiro" ? "abrir_banheiro" : "abrir";
 
                 const n8nPayload = {
@@ -122,17 +130,11 @@ export async function sendQrForm(payload: QrWebhookPayload): Promise<boolean> {
                     original_payload: payload
                 };
 
-                // O envio ao n8n pode falhar, mas não deve impedir o sucesso da operação (já salvo no banco)
                 fetch(webhookUrl, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(n8nPayload),
-                }).then(res => {
-                    if (!res.ok) console.error("Falha ao enviar webhook N8N:", res.statusText);
-                    else console.log("Webhook N8N enviado com sucesso.");
-                }).catch(err => {
-                    console.error("Erro de conexão com N8N:", err);
-                });
+                }).catch(err => console.error("Erro N8N:", err));
             }
         }
 
@@ -142,3 +144,12 @@ export async function sendQrForm(payload: QrWebhookPayload): Promise<boolean> {
         return false;
     }
 }
+
+function valuesToGuestInfo(values: any): any {
+    if (!values) return null;
+    return {
+        nome: values.nome || values.solicitante,
+        contato: values.telefone || values.contato
+    };
+}
+

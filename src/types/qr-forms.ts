@@ -16,13 +16,11 @@ export interface ArCondicionadoParams extends QrFormBaseParams {
     marca?: string;
 }
 
-// Payload format for the Webhook
 export interface QrWebhookPayload {
     tipo: "dispenser" | "banheiro" | "banheiro_ralo" | "ar_condicionado" | "servico_terceirizado";
     id_qrcode: number | string;
     localizacao: string;
     dados_usuario: Record<string, any>;
     timestamp: string;
-    // Optional metadata from URL
     metadata?: Record<string, any>;
 }
