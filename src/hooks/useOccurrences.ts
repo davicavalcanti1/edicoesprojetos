@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -214,38 +215,212 @@ export function useNursingOccurrenceStats() {
 
 export function useUpdateOccurrence() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   return useMutation({
-    mutationFn: async (data: any) => {
-      console.warn("Update not implemented for unified hook yet.", data);
-      throw new Error("Update not implemented");
+    mutationFn: async ({ id, original_table, ...updates }: { id: string; original_table: string;[key: string]: any }) => {
+      if (!original_table) throw new Error("Original table required for update");
+
+      const { error } = await supabase
+        .from(original_table as any)
+        .update(updates)
+        .eq('id', id);
+
+      if (error) throw error;
     },
-    onError: () => toast({ title: "Erro", description: "Not implemented in refactor" })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["occurrences-unified"] });
+      queryClient.invalidateQueries({ queryKey: ["occurrence-unified"] });
+      toast({ title: "Ocorrência atualizada com sucesso" });
+    },
+    onError: (err) => toast({ title: "Erro ao atualizar", description: err.message, variant: "destructive" })
   });
 }
 
 export function useUpdateOccurrenceStatus() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   return useMutation({
-    mutationFn: async (data: any) => {
-      console.warn("Update Status not implemented for unified hook yet.", data);
-      throw new Error("Update Status not implemented");
+    mutationFn: async ({ id, status, original_table }: { id: string; status: string; original_table: string }) => {
+      if (!original_table) throw new Error("Original table required for update");
+
+      const { error } = await supabase
+        .from(original_table as any)
+        .update({ status })
+        .eq('id', id);
+
+      if (error) throw error;
     },
-    onError: () => toast({ title: "Erro", description: "Not implemented in refactor" })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["occurrences-unified"] });
+      queryClient.invalidateQueries({ queryKey: ["occurrence-unified"] });
+      toast({ title: "Status atualizado" });
+    },
+    onError: (err) => toast({ title: "Erro ao atualizar status", description: err.message, variant: "destructive" })
   });
 }
 
-export function useCreateOccurrence() {
+// =========================================================
+// CREATION HOOKS
+// =========================================================
+
+export function useCreateAdminOccurrence() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { profile } = useAuth();
+  const navigate = useNavigate();
+
   return useMutation({
-    mutationFn: async () => { throw new Error("Use specific create hooks: useCreateAdminOccurrence, etc.") },
-    onError: () => toast({ title: "Erro", description: "Use specific forms" })
+    mutationFn: async (data: any) => {
+      if (!profile?.tenant_id || !profile?.id) throw new Error("Missing profile info");
+
+      const payload = {
+        tenant_id: profile.tenant_id,
+        criado_por: profile.id,
+        titulo: data.titulo,
+        descricao: data.descricao,
+        categoria: data.categoria || "Geral",
+        prioridade: data.prioridade || "media",
+        status: "pendente"
+      };
+
+      const { data: res, error } = await (supabase
+        .from("ocorrencias_adm" as any) as any)
+        .insert(payload)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["occurrences-unified"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-occurrences-new"] });
+      toast({ title: "Ocorrência Administrativa criada" });
+      navigate("/ocorrencias");
+    },
+    onError: (err) => toast({ title: "Erro ao criar", description: err.message, variant: "destructive" })
   });
 }
 
 export function useCreateNursingOccurrence() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { profile } = useAuth();
+  const navigate = useNavigate();
+
   return useMutation({
-    mutationFn: async () => { throw new Error("Use specific create hooks for Enf") },
-    onError: () => toast({ title: "Erro", description: "Not implemented in refactor" })
+    mutationFn: async (data: any) => {
+      if (!profile?.tenant_id || !profile?.id) throw new Error("Missing profile info");
+
+      const payload = {
+        tenant_id: profile.tenant_id,
+        criado_por: profile.id,
+        tipo_incidente: data.subtipo || "Geral",
+        descricao_detalhada: data.descricao,
+        paciente_nome: data.paciente?.nomeCompleto,
+        paciente_prontuario: data.paciente?.idPaciente,
+        data_incidente: data.paciente?.dataHoraEvento || new Date().toISOString(),
+        conduta_tomada: data.conduta,
+        status: "registrada"
+      };
+
+      const { data: res, error } = await (supabase
+        .from("ocorrencias_enf" as any) as any)
+        .insert(payload)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["occurrences-unified"] });
+      queryClient.invalidateQueries({ queryKey: ["nursing-occurrences-new"] });
+      toast({ title: "Ocorrência de Enfermagem criada" });
+      navigate("/ocorrencias");
+    },
+    onError: (err) => toast({ title: "Erro ao criar", description: err.message, variant: "destructive" })
+  });
+}
+
+export function useCreateMedicalOccurrence() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { profile } = useAuth();
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      if (!profile?.tenant_id || !profile?.id) throw new Error("Missing profile info");
+
+      const payload = {
+        tenant_id: profile.tenant_id,
+        criado_por: profile.id,
+        paciente_nome: data.paciente?.nomeCompleto,
+        exame_tipo: data.paciente?.tipoExame || "Geral",
+        data_exame: data.paciente?.dataHoraEvento ? new Date(data.paciente.dataHoraEvento).toISOString().split('T')[0] : null,
+        motivo_revisao: data.motivo || "Revisão",
+        descricao_solicitacao: data.descricao,
+        prioridade: "rotina",
+        status: "pendente",
+        dados_especificos: data.dadosEspecificos || {} // Add generic jsonb if needed
+      };
+
+      const { data: res, error } = await (supabase
+        .from("ocorrencias_laudo" as any) as any)
+        .insert(payload)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["occurrences-unified"] });
+      queryClient.invalidateQueries({ queryKey: ["medical-occurrences-new"] });
+      toast({ title: "Solicitação de Revisão criada" });
+      navigate("/ocorrencias");
+    },
+    onError: (err) => toast({ title: "Erro ao criar", description: err.message, variant: "destructive" })
+  });
+}
+
+export function useCreateGenericOccurrence() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { profile } = useAuth();
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      if (!profile?.tenant_id || !profile?.id) throw new Error("Missing profile info");
+
+      const payload = {
+        tenant_id: profile.tenant_id,
+        criado_por: profile.id,
+        tipo: data.tipo || 'livre',
+        subtipo: data.subtipo || 'geral',
+        descricao: data.descricao,
+        status: "registrada",
+        paciente_info: data.paciente
+      };
+
+      const { data: res, error } = await (supabase
+        .from("occurrences" as any) as any)
+        .insert(payload)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["occurrences-unified"] });
+      toast({ title: "Ocorrência criada" });
+      navigate("/ocorrencias");
+    },
+    onError: (err) => toast({ title: "Erro ao criar", description: err.message, variant: "destructive" })
   });
 }
