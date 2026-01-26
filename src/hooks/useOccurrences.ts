@@ -261,6 +261,81 @@ export function useUpdateOccurrenceStatus() {
   });
 }
 
+
+export function useCreateOccurrence() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { profile } = useAuth();
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      if (!profile?.tenant_id || !profile?.id) throw new Error("Missing profile info");
+
+      // Handle flat structure from NovaOcorrenciaForm
+      const paciente = data.paciente || {
+        nomeCompleto: data.paciente_nome_completo,
+        telefone: data.paciente_telefone,
+        idPaciente: data.paciente_id,
+        tipoExame: data.paciente_tipo_exame,
+        dataHoraEvento: data.paciente_data_hora_evento
+      };
+
+      // Medical / Laudo (revisao_exame)
+      if (data.tipo === 'revisao_exame') {
+        const payload = {
+          tenant_id: profile.tenant_id,
+          criado_por: profile.id,
+          paciente_nome: paciente.nomeCompleto,
+          exame_tipo: paciente.tipoExame || "Geral",
+          data_exame: paciente.dataHoraEvento ? new Date(paciente.dataHoraEvento).toISOString().split('T')[0] : null,
+          motivo_revisao: (data.dados_especificos as any)?.motivoRevisao || "Revisão",
+          descricao_solicitacao: data.descricao_detalhada || JSON.stringify(data.dados_especificos || {}),
+          prioridade: "rotina",
+          status: "pendente",
+          dados_especificos: data.dados_especificos || {}
+        };
+
+        const { data: res, error } = await (supabase
+          .from("ocorrencias_laudo" as any) as any)
+          .insert(payload)
+          .select()
+          .single();
+        if (error) throw error;
+        return res;
+      }
+
+      // Generic Fallback (Livre, Paciente, etc)
+      const payload = {
+        tenant_id: profile.tenant_id,
+        criado_por: profile.id,
+        tipo: data.tipo || 'livre',
+        subtipo: data.subtipo || 'geral',
+        descricao: data.descricao_detalhada || JSON.stringify(data.dados_especificos || {}),
+        status: "registrada",
+        paciente_info: paciente,
+        dados_especificos: data.dados_especificos
+      };
+
+      const { data: res, error } = await (supabase
+        .from("occurrences" as any) as any)
+        .insert(payload)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["occurrences-unified"] });
+      queryClient.invalidateQueries({ queryKey: ["medical-occurrences-new"] });
+      toast({ title: "Ocorrência criada" });
+      navigate("/ocorrencias");
+    },
+    onError: (err) => toast({ title: "Erro ao criar", description: err.message, variant: "destructive" })
+  });
+}
+
 // =========================================================
 // CREATION HOOKS
 // =========================================================
@@ -314,14 +389,19 @@ export function useCreateNursingOccurrence() {
     mutationFn: async (data: any) => {
       if (!profile?.tenant_id || !profile?.id) throw new Error("Missing profile info");
 
+      // Support flat structure from NovaOcorrenciaForm (backward compatibility)
+      const pacienteName = data.paciente?.nomeCompleto || data.paciente_nome_completo;
+      const pacienteId = data.paciente?.idPaciente || data.paciente_id || data.paciente_prontuario;
+      const incidentDate = data.paciente?.dataHoraEvento || data.paciente_data_hora_evento || new Date().toISOString();
+
       const payload = {
         tenant_id: profile.tenant_id,
         criado_por: profile.id,
         tipo_incidente: data.subtipo || "Geral",
-        descricao_detalhada: data.descricao,
-        paciente_nome: data.paciente?.nomeCompleto,
-        paciente_prontuario: data.paciente?.idPaciente,
-        data_incidente: data.paciente?.dataHoraEvento || new Date().toISOString(),
+        descricao_detalhada: data.descricao_detalhada || data.descricao,
+        paciente_nome: pacienteName,
+        paciente_prontuario: pacienteId,
+        data_incidente: incidentDate,
         conduta_tomada: data.conduta,
         status: "registrada"
       };
