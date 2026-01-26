@@ -215,7 +215,6 @@ export default function NovaOcorrenciaForm() {
     setIsSubmitting(true);
     try {
       // Create the occurrence
-      // Create the occurrence
       let occurrence;
 
       if (data.tipo === 'enfermagem') {
@@ -233,6 +232,14 @@ export default function NovaOcorrenciaForm() {
           descricao_detalhada: JSON.stringify(data.dadosEspecificos || {}),
           dados_especificos: data.dadosEspecificos,
           // medico_destino: ... 
+        });
+      } else if (data.tipo === 'administrativa') {
+        occurrence = await createOccurrence.mutateAsync({
+          ...data,
+          tipo: 'administrativa',
+          subtipo: data.subtipo,
+          descricao_detalhada: data.dadosEspecificos?.descricao || "Sem descrição",
+          dados_especificos: data.dadosEspecificos
         });
       } else {
         occurrence = await createOccurrence.mutateAsync({
