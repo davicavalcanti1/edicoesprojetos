@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface Attachment {
   id: string;
-  occurrence_id: string;
+  origin_id: string;
+  origin_table: string;
   file_name: string;
   file_type: string | null;
   file_size: number | null;
@@ -13,27 +15,27 @@ export interface Attachment {
   uploaded_em: string;
 }
 
-
-// Fetch attachments with signed URLs for public access
-export function useAttachmentsWithSignedUrls(occurrenceId: string | undefined) {
+// Fetch attachments with signed URLs
+export function useAttachmentsWithSignedUrls(originId: string | undefined, originTable: string) {
   return useQuery({
-    queryKey: ["attachments-signed", occurrenceId],
+    queryKey: ["attachments-signed", originTable, originId],
     queryFn: async () => {
-      if (!occurrenceId) return [];
+      if (!originId || !originTable) return [];
 
       const { data, error } = await supabase
-        .from("occurrence_attachments")
+        .from("attachments" as any)
         .select("*")
-        .eq("occurrence_id", occurrenceId)
-        .order("uploaded_em", { ascending: true });
+        .eq("origin_id", originId)
+        .eq("origin_table", originTable)
+        .order("uploaded_at", { ascending: true });
 
       if (error) throw error;
 
-      // Generate signed URLs for each attachment
+      // Generate signed URLs
       const attachmentsWithUrls = await Promise.all(
         (data || []).map(async (att: any) => {
           const { data: urlData } = await supabase.storage
-            .from("occurrence-attachments")
+            .from("attachments")
             .createSignedUrl(att.file_url, 60 * 60 * 24 * 7); // 7 days
 
           return {
@@ -46,35 +48,40 @@ export function useAttachmentsWithSignedUrls(occurrenceId: string | undefined) {
 
       return attachmentsWithUrls as (Attachment & { signed_url: string | null })[];
     },
-    enabled: !!occurrenceId,
+    enabled: !!originId && !!originTable,
   });
 }
 
-// Upload attachments for an occurrence
+// Upload attachments
 export function useUploadAttachments() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { profile } = useAuth(); // Need tenant_id
 
   return useMutation({
     mutationFn: async ({
-      occurrenceId,
+      originId,
+      originTable,
       files,
       userId,
     }: {
-      occurrenceId: string;
+      originId: string;
+      originTable: string;
       files: File[];
       userId: string;
     }) => {
+      if (!profile?.tenant_id) throw new Error("Tenant ID not found");
+
       const uploadedAttachments: Attachment[] = [];
 
       for (const file of files) {
         const isImage = isImageMimeType(file.type);
-        const fileName = `${Date.now()}-${file.name}`;
-        const filePath = `${occurrenceId}/${fileName}`;
+        const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+        const filePath = `${originTable}/${originId}/${fileName}`;
 
-        // Upload to storage
+        // Upload to storage 'attachments'
         const { error: uploadError } = await supabase.storage
-          .from("occurrence-attachments")
+          .from("attachments")
           .upload(filePath, file);
 
         if (uploadError) {
@@ -82,23 +89,29 @@ export function useUploadAttachments() {
           throw new Error(`Erro ao fazer upload de ${file.name}: ${uploadError.message}`);
         }
 
-        // Insert into database
+        // Insert into database 'attachments'
+        const payload = {
+          tenant_id: profile.tenant_id,
+          origin_table: originTable,
+          origin_id: originId,
+          file_name: file.name,
+          file_type: file.type,
+          file_size: file.size,
+          file_url: filePath,
+          is_image: isImage,
+          uploaded_by: userId,
+        };
+
         const { data, error: insertError } = await supabase
-          .from("occurrence_attachments")
-          .insert({
-            occurrence_id: occurrenceId,
-            file_name: file.name,
-            file_type: file.type,
-            file_size: file.size,
-            file_url: filePath,
-            is_image: isImage,
-            uploaded_by: userId,
-          })
+          .from("attachments" as any)
+          .insert(payload)
           .select()
           .single();
 
         if (insertError) {
           console.error("Insert error:", insertError);
+          // Try to clean up file
+          await supabase.storage.from("attachments").remove([filePath]);
           throw new Error(`Erro ao registrar ${file.name}: ${insertError.message}`);
         }
 
@@ -110,31 +123,24 @@ export function useUploadAttachments() {
 
       return uploadedAttachments;
     },
-    onSuccess: (_, { occurrenceId }) => {
-      queryClient.invalidateQueries({ queryKey: ["attachments", occurrenceId] });
-      toast({
-        title: "Anexos enviados",
-        description: "Os arquivos foram enviados com sucesso.",
-      });
+    onSuccess: (_, { originId, originTable }) => {
+      queryClient.invalidateQueries({ queryKey: ["attachments-signed", originTable, originId] });
     },
     onError: (error) => {
-      toast({
-        title: "Erro ao enviar anexos",
-        description: error.message,
-        variant: "destructive",
-      });
+      // Toast is handled by component usually, but we can do it here too
+      console.error("Error uploading:", error);
     },
   });
 }
 
 
-// Get signed URLs for a list of attachments
+// Get signed URLs for a list
 export async function getSignedUrlsForAttachments(attachments: Attachment[]): Promise<(Attachment & { signed_url: string })[]> {
   const results = await Promise.all(
     attachments.map(async (att) => {
       const { data } = await supabase.storage
-        .from("occurrence-attachments")
-        .createSignedUrl(att.file_url, 60 * 60 * 24 * 7); // 7 days
+        .from("attachments")
+        .createSignedUrl(att.file_url, 60 * 60 * 24 * 7);
 
       return {
         ...att,
@@ -146,13 +152,11 @@ export async function getSignedUrlsForAttachments(attachments: Attachment[]): Pr
   return results;
 }
 
-// Helper function to check if a mime type is an image
 function isImageMimeType(mimeType: string | null): boolean {
   if (!mimeType) return false;
   return mimeType.startsWith("image/");
 }
 
-// Helper to format file size
 export function formatFileSize(bytes: number | null): string {
   if (!bytes) return "0 B";
   const k = 1024;

@@ -254,11 +254,22 @@ export default function NovaOcorrenciaForm() {
 
       let uploadedFiles: any[] = [];
 
+      // Determine origin table for attachments
+      let originTable = 'occurrences';
+      if (data.tipo === 'enfermagem') {
+        originTable = 'ocorrencias_enf';
+      } else if (data.tipo === 'revisao_exame') {
+        originTable = 'ocorrencias_laudo';
+      } else if (data.tipo === 'administrativa') {
+        originTable = 'ocorrencias_adm';
+      }
+
       // Upload attachments
       if (pendingFiles.length > 0 && profile) {
         try {
           uploadedFiles = await uploadAttachments.mutateAsync({
-            occurrenceId: occurrence.id,
+            originId: occurrence.id,
+            originTable: originTable,
             files: pendingFiles.map((pf) => pf.file),
             userId: profile.id,
           });

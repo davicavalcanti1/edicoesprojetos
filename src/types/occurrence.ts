@@ -286,3 +286,20 @@ export const subtypeDescriptions: Record<string, string> = {
   paciente_outros: "Outras ocorrências relatadas pelo paciente.",
   livre_outros: "Outras ocorrências diversas.",
 };
+
+export interface OccurrenceFormData {
+  dataHoraEvento: string;
+  unidadeLocal?: string;
+  paciente: {
+    nomeCompleto: string;
+    cpf?: string;
+    telefone: string;
+    idPaciente?: string;
+    dataNascimento: string;
+    sexo?: "Masculino" | "Feminino";
+    tipoExame?: string;
+  };
+  tipo: OccurrenceType;
+  subtipo: OccurrenceSubtype;
+  dadosEspecificos: Record<string, any>;
+}
