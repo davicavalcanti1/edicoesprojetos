@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { generateSecureProtocol } from "@/lib/form-utils";
+// Removed unused generateSecureProtocol
 
 const formSchema = z.object({
     situacao: z.string().min(1, "Selecione a situação"),
@@ -48,36 +48,29 @@ export default function DispenserForm() {
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true);
         try {
-            // 1. Gerar Protocolo
-            const protocolNum = await generateSecureProtocol();
-            setProtocol(protocolNum);
-
-            // 2. Obter Tenant e User
-            const { data: { user } } = await supabase.auth.getUser();
+            // 1. Obter Tenant
             const { data: tenant } = await supabase.from('tenants').select('id').limit(1).maybeSingle();
             const tenantId = tenant?.id;
 
-            // 3. Salvar no Supabase (Maintenance Records - Tabela correta para Dispenser)
+            if (!tenantId) throw new Error("Tenant não encontrado");
+
+            // 2. Salvar no Supabase (chamados_dispenser)
             // @ts-ignore
-            const { error } = await supabase.from("maintenance_records").insert({
-                protocolo: protocolNum,
-                tipo_origem: "dispenser",
-                status: "aberto",
-                tenant_id: tenantId, // Pode ser null se não configurado, mas ideal ter
-                criado_por: user?.id || null,
-
+            const { data: novoChamado, error } = await supabase.from("chamados_dispenser").insert({
                 localizacao: params.localizacao,
-                defeito_descricao: values.situacao, // Mapeado de situacao
-                descricao: `[Dispenser] ${params.localizacao} - ${values.situacao}\n${values.descricao || ''}`,
-
-                // Metadados extras em JSON se tabela suportar ou concatenar na descrição
-                // maintenance_records não tem coluna 'dados_especificos' padrão na migração anterior?
-                // Se não tem, guardamos info relevante nos campos existentes.
-            });
+                tipo_insumo: "Alcool",
+                problema: values.situacao,
+                observacao: values.descricao, // Added column via migration
+                tenant_id: tenantId,
+                status: "aberto"
+            }).select().single();
 
             if (error) throw error;
 
-            // 4. Webhook N8N (Mantendo estrutura prévia)
+            const protocolNum = novoChamado.protocolo;
+            setProtocol(protocolNum);
+
+            // 3. Webhook N8N
             const linkFinalizar = `https://teste.imagoradiologia.cloud/formularios/dispenser/finalizar?protocolo=${protocolNum}`;
             const gpMessage = `*CHAMADO ABERTO (DISPENSER DE ÁLCOOL)*
 Protocolo: ${protocolNum}
@@ -99,15 +92,7 @@ ${linkFinalizar}`;
                 source: "site_dispenser_abrir"
             };
 
-            await fetch("https://n8n.imagoradiologia.cloud/webhook/Dispenser", { // URL corrigida para variável se possível, mas mantendo hardcoded do sendQrForm se necessário ou original
-                // O código original usava "https://n8n.imagoradiologia.cloud/webhook/Tickets"
-                // O sendQrForm usa "https://n8n.imagoradiologia.cloud/webhook/Dispenser"
-                // O usuário pediu separação. Vou usar a URL específica de Dispenser se existir ou manter a Tickets se for genérica.
-                // Vou usar a URL DO CÓDIGO ANTERIOR para garantir, mas o sendQrForm sugere /Dispenser. 
-                // O código anterior usava /Tickets. Mantenho /Tickets se não tiver certeza, ou atualizo.
-                // O usuário reclamou de "misturar". Vou usar a URL específica /Dispenser (baseada no sendQrForm) se fizer sentido.
-                // Mas para segurança use a URL antiga ou /Dispenser se validado.
-                // Vou manter a URL original para não quebrar o webhook se ele escuta em Tickets.
+            await fetch("https://n8n.imagoradiologia.cloud/webhook/Dispenser", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(n8nPayload)

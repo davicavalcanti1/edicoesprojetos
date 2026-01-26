@@ -54,31 +54,45 @@ export default function ArTerceirizadoForm() {
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true);
         try {
+            // 0. Tenant
+            const { data: tenant } = await supabase.from('tenants').select('id').limit(1).maybeSingle();
+            const tenantId = tenant?.id;
+
             // 1. Upload
             const uploads = [];
             if (fotoAntes) uploads.push(fotoAntes);
             if (fotoDepois) uploads.push(fotoDepois);
             const photoUrls = await uploadMaintenancePhotos(uploads);
 
-            // 2. Insert Supabase
-            const { error } = await supabase.from("maintenance_records").insert({
-                tipo_origem: "ar_condicionado",
-                subtipo: "terceirizado",
+            // 2. Insert Supabase (chamados_ar_condicionado)
+            // @ts-ignore
+            const { error: insertError } = await supabase.from("chamados_ar_condicionado").insert({
                 localizacao: params.sala || "N/A",
-                sala: params.sala,
+                descricao: `[Terceirizado] ${values.tipo_manutencao}: ${values.descricao}. Tech: ${values.tecnico}`,
+
+                // Fields specific to AC
                 modelo: params.modelo,
                 numero_serie: params.numero_serie,
-                responsavel: values.tecnico,
-                data_manutencao: values.data_manutencao,
-                tipo_manutencao: values.tipo_manutencao,
-                descricao: values.descricao,
-                proxima_manutencao: values.proxima_manutencao || null,
-                custo: values.custo ? parseFloat(values.custo.replace(',', '.')) : null,
-                observacoes: values.observacoes,
-                fotos: photoUrls
+
+                // Status
+                status: "concluido",
+                prioridade: "media",
+                tenant_id: tenantId,
+
+                // Metadata
+                solicitante_info: {
+                    nome: values.tecnico,
+                    tipo: "terceirizado",
+                    tipo_manutencao: values.tipo_manutencao,
+                    data_manutencao: values.data_manutencao,
+                    proxima: values.proxima_manutencao,
+                    custo: values.custo,
+                    fotos: photoUrls,
+                    observacoes: values.observacoes
+                }
             });
 
-            if (error) throw error;
+            if (insertError) throw insertError;
 
             // 3. Webhook
             const n8nPayload = {

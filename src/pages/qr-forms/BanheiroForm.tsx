@@ -16,7 +16,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { generateSecureProtocol } from "@/lib/form-utils";
 
 const formSchema = z.object({
     problema: z.string().min(1, "Selecione o problema"),
@@ -48,32 +47,28 @@ export default function BanheiroForm() {
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true);
         try {
-            // 1. Gerar Protocolo
-            const protocolNum = await generateSecureProtocol();
-            setProtocol(protocolNum);
-
-            // 2. Tenant e User
-            const { data: { user } } = await supabase.auth.getUser();
+            // 1. Tenant
             const { data: tenant } = await supabase.from('tenants').select('id').limit(1).maybeSingle();
             const tenantId = tenant?.id;
 
-            // 3. Salvar no Supabase (Maintenance Records)
-            // @ts-ignore
-            const { error } = await supabase.from("maintenance_records").insert({
-                protocolo: protocolNum,
-                tipo_origem: "banheiro",
-                status: "aberto",
-                tenant_id: tenantId,
-                criado_por: user?.id || null,
+            if (!tenantId) throw new Error("Tenant não encontrado");
 
+            // 2. Salvar no Supabase (chamados_banheiro)
+            // @ts-ignore
+            const { data: novoChamado, error } = await supabase.from("chamados_banheiro").insert({
                 localizacao: params.localizacao,
-                defeito_descricao: values.problema,
-                descricao: `[Banheiro] ${params.localizacao} - ${values.problema}\n${values.descricao}`,
-            });
+                problema: values.problema,
+                observacao: values.descricao, // Maps to descricao in form
+                tenant_id: tenantId,
+                status: "aberto"
+            }).select().single();
 
             if (error) throw error;
 
-            // 4. Webhook N8N
+            const protocolNum = novoChamado.protocolo;
+            setProtocol(protocolNum);
+
+            // 3. Webhook N8N
             const linkFinalizar = `https://teste.imagoradiologia.cloud/formularios/banheiro/finalizar?protocolo=${protocolNum}`;
             const gpMessage = `🚻 *CHAMADO ABERTO (BANHEIRO)*
 Protocolo: ${protocolNum}

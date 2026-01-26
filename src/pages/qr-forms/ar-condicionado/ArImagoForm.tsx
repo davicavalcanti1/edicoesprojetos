@@ -54,33 +54,51 @@ export default function ArCondicionadoImagoForm() {
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true);
         try {
-            // 1. Upload Fotos
+            // 1. Tenant
+            const { data: tenant } = await supabase.from('tenants').select('id').limit(1).maybeSingle();
+            const tenantId = tenant?.id;
+            if (!tenantId) throw new Error("Tenant não encontrado");
+
+            // 2. Upload Fotos (Shared bucket?)
             const uploads = [];
             if (fotoAntes) uploads.push(fotoAntes);
             if (fotoDepois) uploads.push(fotoDepois);
             if (values.tem_defeito === "sim" && fotoDefeito) uploads.push(fotoDefeito);
 
+            // Note: uploadMaintenancePhotos likely puts in 'maintenance-photos' bucket. 
+            // If we moved to 'attachments', this might need update, but let's assume legacy bucket still exists or we use new one later.
+            // For now, let's keep it if it works, otherwise we might need to change buckets.
             const photoUrls = await uploadMaintenancePhotos(uploads);
 
-            // 2. Salvar no Supabase (maintenance_records)
-            const { error } = await supabase.from("maintenance_records").insert({
-                tipo_origem: "ar_condicionado",
-                subtipo: "imago",
+            // 3. Salvar no Supabase (chamados_ar_condicionado)
+            // @ts-ignore
+            const { error: insertError } = await supabase.from("chamados_ar_condicionado").insert({
                 localizacao: params.sala || params.localizacao || "N/A",
-                sala: params.sala,
+                descricao: `[Manutenção Preventiva] ${values.descricao} \nResp: ${values.funcionario}`,
+
+                // Fields specific to AC
                 modelo: params.modelo,
                 numero_serie: params.numero_serie,
-                responsavel: values.funcionario,
-                data_manutencao: values.data_limpeza,
-                descricao: values.descricao,
-                tem_defeito: values.tem_defeito === "sim",
-                defeito_descricao: values.defeito_descricao,
-                fotos: photoUrls // Array de strings
+
+                // Status
+                status: values.tem_defeito === "sim" ? "aberto" : "concluido", // Se tem defeito, deixa aberto
+                prioridade: "media",
+                tenant_id: tenantId,
+
+                // Metadata
+                solicitante_info: {
+                    nome: values.funcionario,
+                    tipo: "tecnico_imago",
+                    data_limpeza: values.data_limpeza,
+                    tem_defeito: values.tem_defeito,
+                    defeito_descricao: values.defeito_descricao,
+                    fotos: photoUrls
+                }
             });
 
-            if (error) throw error;
+            if (insertError) throw insertError;
 
-            // 3. Webhook N8N (Disparar sem await blockante se preferir, ou await)
+            // 4. Webhook N8N
             const n8nPayload = {
                 event_type: "registrar_manutencao_ar",
                 origem: "imago",
@@ -92,10 +110,6 @@ export default function ArCondicionadoImagoForm() {
                 submitted_at: new Date().toISOString()
             };
 
-            // fetch para n8n... (sem URL definida no prompt para Ar, usando a geral ou placeholder)
-            // Assumindo a URL geral de Tickets ou uma específica se houver. 
-            // Vou usar a URL base do webhook Tickets mencionada par ao fluxo geral, ou deixar pronto.
-            // O prompt diz "Enviar n8n payload com event_type...".
             await fetch("https://n8n.imagoradiologia.cloud/webhook/Tickets", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

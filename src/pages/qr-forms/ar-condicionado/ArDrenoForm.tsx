@@ -49,29 +49,43 @@ export default function ArDrenoForm() {
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true);
         try {
+            // 0. Tenant
+            const { data: tenant } = await supabase.from('tenants').select('id').limit(1).maybeSingle();
+            const tenantId = tenant?.id;
+
             // 1. Upload
             const uploads = [];
             if (fotoAntes) uploads.push(fotoAntes);
             if (fotoDepois) uploads.push(fotoDepois);
             const photoUrls = await uploadMaintenancePhotos(uploads);
 
-            // 2. Insert Supabase (maintenance_records)
-            const { error } = await supabase.from("maintenance_records").insert({
-                tipo_origem: "ar_condicionado",
-                subtipo: "dreno",
+            // 2. Insert Supabase (chamados_ar_condicionado)
+            // @ts-ignore
+            const { error: insertError } = await supabase.from("chamados_ar_condicionado").insert({
                 localizacao: params.sala || "N/A",
-                sala: params.sala,
+                descricao: `[Dreno/Limpeza] Tech: ${values.tecnico} - ${values.descricao}`,
+
+                // Fields specific to AC
                 modelo: params.modelo,
                 numero_serie: params.numero_serie,
-                responsavel: values.tecnico,
-                data_manutencao: values.data_manutencao,
-                descricao: values.descricao,
-                proxima_manutencao: values.proxima_manutencao || null,
-                custo: values.custo ? parseFloat(values.custo.replace(',', '.')) : null,
-                fotos: photoUrls
+
+                // Status - Finished
+                status: "concluido",
+                prioridade: "baixa",
+                tenant_id: tenantId,
+
+                // Metadata
+                solicitante_info: {
+                    nome: values.tecnico,
+                    tipo: "dreno_limpeza",
+                    data_manutencao: values.data_manutencao,
+                    proxima: values.proxima_manutencao,
+                    custo: values.custo,
+                    fotos: photoUrls
+                }
             });
 
-            if (error) throw error;
+            if (insertError) throw insertError;
 
             // 3. Webhook N8N
             const n8nPayload = {

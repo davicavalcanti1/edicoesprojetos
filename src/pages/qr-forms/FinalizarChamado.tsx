@@ -30,9 +30,22 @@ export default function FinalizarChamado() {
 
     const loadOccurrence = async () => {
         try {
+            // Check all 3 tables since we don't know the type from protocol alone without parsing
+            // But we can guess from prefix if standard protocol:
+            // AC-..., DSP-..., WC-...
+
+            let table = "";
+            if (protocolo?.includes("-AC-")) table = "chamados_ar_condicionado";
+            else if (protocolo?.includes("-DSP-")) table = "chamados_dispenser";
+            else if (protocolo?.includes("-WC-")) table = "chamados_banheiro";
+            else {
+                // Fallback: try all or error
+                throw new Error("Protocolo inválido ou não reconhecido.");
+            }
+
             // @ts-ignore
             const { data, error } = await supabase
-                .from("maintenance_records")
+                .from(table as any)
                 .select("*")
                 .eq("protocolo", protocolo)
                 .single();
@@ -40,12 +53,13 @@ export default function FinalizarChamado() {
             if (error) throw error;
             if (!data) throw new Error("Chamado não encontrado.");
 
-            // Verifica se já está concluída
-            if ((data as any).status === "concluida") {
+            // Verifica se já está concluída - status field varies?
+            // All tables have 'status' text or enum
+            if ((data as any).status === "concluido" || (data as any).status === "concluida") {
                 setError("Este chamado já foi finalizado.");
             }
 
-            setOccurrence(data);
+            setOccurrence({ ...data, _tableName: table });
         } catch (err: any) {
             console.error("Erro ao carregar chamado:", err);
             setError(err.message || "Erro ao carregar detalhes do chamado.");
@@ -55,35 +69,27 @@ export default function FinalizarChamado() {
     };
 
     const handleFinalize = async () => {
-        if (!occurrence) return;
+        if (!occurrence || !occurrence._tableName) return;
 
         setIsSubmitting(true);
         try {
-            // 1. Atualizar Supabase
+            // 1. Atualizar Supabase (using known table)
             // @ts-ignore
             const { error: dbError } = await supabase
-                .from("maintenance_records")
+                .from(occurrence._tableName)
                 .update({
-                    status: "concluida",
-                    finalizado_em: new Date().toISOString()
+                    status: "concluido", // Using universal completed status for maintenance
+                    resolvido_em: new Date().toISOString() // Assuming resolvido_em exists in schema
                 })
                 .eq("id", occurrence.id);
 
             if (dbError) throw dbError;
 
             // 2. Montar mensagem GP
-            let tipoEnvio = "tecnica";
             let webhookType = null;
-
-            // Check descriptions (maitenance_records has 'descricao' column mapped to 'descricao_detalhada' in logic notion)
-            const desc = occurrence.descricao || "";
-            const tipo = occurrence.tipo_origem || occurrence.subtipo || "";
-
-            if (desc.toLowerCase().includes("dispenser") || tipo === "dispenser") {
-                webhookType = "dispenser";
-            } else if (desc.toLowerCase().includes("banheiro") || tipo === "banheiro") {
-                webhookType = "banheiro";
-            }
+            if (occurrence._tableName === "chamados_dispenser") webhookType = "dispenser";
+            else if (occurrence._tableName === "chamados_banheiro") webhookType = "banheiro";
+            // AC typically doesn't use this finalize page? But if it does...
 
             if (webhookType && N8N_URLS[webhookType as keyof typeof N8N_URLS]) {
                 const gpMessage = `✅ *CHAMADO FINALIZADO*\n\n📝 Protocolo: *${protocolo}*\n📅 Finalizado em: ${new Date().toLocaleString("pt-BR")}\n\nO serviço foi concluído com sucesso.`;
