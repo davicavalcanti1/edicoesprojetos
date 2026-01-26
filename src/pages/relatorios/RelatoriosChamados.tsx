@@ -86,10 +86,11 @@ export default function RelatoriosChamados({ typeFilter, embedded, excludeTypes 
             }
 
             if (filtroStatus === "abertos") {
-                // Status na view é 'registrada' ou 'concluida'. Aberto = registrada
-                query = query.eq("status", "registrada");
+                // Status: 'registrada' (occurrences) or 'aberto' (maintenance)
+                query = query.in("status", ["registrada", "aberto", "pendente", "em_andamento"]);
             } else if (filtroStatus === "finalizados") {
-                query = query.eq("status", "concluida");
+                // Status: 'concluida' (occurrences) or 'resolvido'/'concluido' (maintenance)
+                query = query.in("status", ["concluida", "concluido", "resolvido"]);
             }
 
             const { data, error } = await query;
@@ -111,7 +112,8 @@ export default function RelatoriosChamados({ typeFilter, embedded, excludeTypes 
         return (
             item.protocolo?.toLowerCase().includes(termo) ||
             item.localizacao?.toLowerCase().includes(termo) ||
-            item.problema?.toLowerCase().includes(termo)
+            item.problema?.toLowerCase().includes(termo) ||
+            item.descricao_detalhada?.toLowerCase().includes(termo)
         );
     });
 
@@ -120,15 +122,16 @@ export default function RelatoriosChamados({ typeFilter, embedded, excludeTypes 
     const dadosPaginados = dadosFiltrados.slice((pagina - 1) * ITENS_POR_PAGINA, pagina * ITENS_POR_PAGINA);
 
     const exportarCSV = () => {
-        const headers = ["Data Abertura", "Protocolo", "Tipo", "Localizacao", "Problema", "Status", "Data Fechamento", "Finalizado Por", "Tempo (h)"];
+        const headers = ["Data Abertura", "Protocolo", "Tipo", "Localizacao", "Problema", "Descricao", "Status", "Data Fechamento", "Finalizado Por", "Tempo (h)"];
         const csvContent = [
             headers.join(","),
             ...dadosFiltrados.map(item => [
                 item.data_abertura,
                 item.protocolo,
                 item.tipo_chamado,
-                `"${item.localizacao}"`, // escape commas
+                `"${item.localizacao}"`,
                 `"${item.problema}"`,
+                `"${item.descricao_detalhada}"`,
                 item.status,
                 item.data_fechamento || "",
                 `"${item.finalizado_por || ""}"`,
@@ -143,6 +146,9 @@ export default function RelatoriosChamados({ typeFilter, embedded, excludeTypes 
         link.download = `relatorio_chamados_${format(new Date(), "yyyyMMdd")}.csv`;
         link.click();
     };
+
+    // Helper para status badge
+    const isFinalizado = (status: string) => ["concluida", "concluido", "resolvido"].includes(status?.toLowerCase());
 
     const content = (
         <>
@@ -247,7 +253,7 @@ export default function RelatoriosChamados({ typeFilter, embedded, excludeTypes 
                                             </TableCell>
                                             <TableCell className="max-w-[200px] truncate" title={item.localizacao}>{item.localizacao}</TableCell>
                                             <TableCell>
-                                                {item.status === 'concluida' ?
+                                                {isFinalizado(item.status) ?
                                                     <Badge className="bg-green-600 hover:bg-green-700">Finalizado</Badge> :
                                                     <Badge variant="destructive">Aberto</Badge>
                                                 }
@@ -296,15 +302,19 @@ export default function RelatoriosChamados({ typeFilter, embedded, excludeTypes 
                             </div>
                             <div className="space-y-1">
                                 <p className="text-sm font-medium text-muted-foreground">Status</p>
-                                <p className="capitalize">{chamadoSelecionado.status === 'concluida' ? 'Finalizado' : 'Aberto'}</p>
+                                <p className="capitalize">{isFinalizado(chamadoSelecionado.status) ? 'Finalizado' : 'Aberto'} <span className="text-xs text-muted-foreground">({chamadoSelecionado.status})</span></p>
                             </div>
                             <div className="space-y-1 col-span-2">
                                 <p className="text-sm font-medium text-muted-foreground">Localização</p>
                                 <p>{chamadoSelecionado.localizacao}</p>
                             </div>
                             <div className="space-y-1 col-span-2">
+                                <p className="text-sm font-medium text-muted-foreground">Categoria / Problema</p>
+                                <p>{chamadoSelecionado.problema}</p>
+                            </div>
+                            <div className="space-y-1 col-span-2">
                                 <p className="text-sm font-medium text-muted-foreground">Descrição / Detalhes</p>
-                                <p className="whitespace-pre-wrap text-sm bg-muted p-2 rounded">{chamadoSelecionado.descricao_detalhada}</p>
+                                <p className="whitespace-pre-wrap text-sm bg-muted p-2 rounded">{chamadoSelecionado.descricao_detalhada || "Sem descrição"}</p>
                             </div>
 
                             <div className="space-y-1">

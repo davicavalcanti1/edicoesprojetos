@@ -107,7 +107,10 @@ export default function DashboardChamados({ typeFilter, embedded, excludeTypes }
             return;
         }
 
-        const finalizados = items.filter(i => i.status === "concluida" || i.data_fechamento).length;
+        const finalizados = items.filter(i =>
+            (i.status && ["concluida", "concluido", "resolvido"].includes(i.status.toLowerCase())) ||
+            i.data_fechamento
+        ).length;
         const abertos = total - finalizados; // ou filtrar status != concluida
         const taxaFinalizacao = (finalizados / total) * 100;
 
