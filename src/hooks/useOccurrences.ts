@@ -381,6 +381,7 @@ export function useCreateAdminOccurrence() {
         status: "pendente"
       };
 
+      // Explicit cast to any to bypass TS check if type definitions aren't fully up to date yet
       const { data: res, error } = await (supabase
         .from("ocorrencias_adm" as any) as any)
         .insert(payload)
