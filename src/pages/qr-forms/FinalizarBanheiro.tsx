@@ -21,7 +21,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-const N8N_BANHEIRO_WEBHOOK = "https://n8n.imagoradiologia.cloud/webhook/Banheiro";
+const N8N_BANHEIRO_WEBHOOK = "https://n8n.imagoradiologia.cloud/webhook/banheiro/";
 
 const formSchema = z.object({
     funcionario: z.string().min(3, "Nome do funcionário é obrigatório"),
@@ -61,9 +61,8 @@ export default function FinalizarBanheiro() {
         try {
             if (!protocolo) return;
             const { data, error } = await supabase
-                .from("occurrences")
+                .from("chamados_banheiro" as any)
                 .select("*")
-                .ilike("protocolo", protocolo)
                 .eq("protocolo", protocolo)
                 .maybeSingle();
 
@@ -73,7 +72,8 @@ export default function FinalizarBanheiro() {
                 return;
             }
 
-            if (data.status === "concluida") {
+            // check status ('aberto' vs 'resolvido'/'concluido')
+            if (data.status === "resolvido" || data.status === "concluido") {
                 setError("Este chamado já foi finalizado anteriormente.");
             }
 
@@ -93,27 +93,27 @@ export default function FinalizarBanheiro() {
         try {
             // 1. Atualizar Supabase
             const { error: dbError } = await supabase
-                .from("occurrences")
+                .from("chamados_banheiro" as any)
                 .update({
-                    status: "concluida",
-                    finalizada_em: new Date().toISOString(),
-                    observacoes: values.observacoes || null,
-                    acao_imediata: `Finalizado por: ${values.funcionario}`
+                    status: "resolvido",
+                    resolvido_em: new Date().toISOString(),
+                    finalizado_por: values.funcionario,
+                    observacao: (occurrence.observacao ? occurrence.observacao + " | " : "") + `Conclusão: ${values.funcionario} - ${values.observacoes || "Sem obs"}`
                 })
                 .eq("id", occurrence.id);
 
             if (dbError) throw dbError;
 
             // 2. Montar mensagem GP e Payload Webhook
-            const localizacao = occurrence.dados_especificos?.localizacao || "N/A";
-            const problema = occurrence.dados_especificos?.problema || "N/A";
-            const descricao = occurrence.dados_especificos?.descricao || "-";
+            const localizacao = occurrence.localizacao || "N/A";
+            const problema = occurrence.problema || "N/A";
+            const descricao = occurrence.observacao || "-";
 
             const gpMessage = `✅ CHAMADO FINALIZADO (BANHEIRO)
 Protocolo: ${protocolo}
 Local: ${localizacao}
 Problema: ${problema}
-Descrição: ${descricao}
+Descrição inicial: ${descricao}
 Finalizado por: ${values.funcionario}
 Observações: ${values.observacoes || "Sem observação"}`;
 
@@ -129,7 +129,7 @@ Observações: ${values.observacoes || "Sem observação"}`;
             };
 
             // Enviar webhook
-            await fetch("https://n8n.imagoradiologia.cloud/webhook/banheiro", {
+            await fetch("https://n8n.imagoradiologia.cloud/webhook/banheiro/", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(n8nPayload)
@@ -206,7 +206,7 @@ Observações: ${values.observacoes || "Sem observação"}`;
                     <div className="mb-6 p-4 rounded-lg bg-secondary/50 border border-secondary text-sm">
                         <p className="font-semibold text-foreground/80">Detalhes do Chamado:</p>
                         <p className="text-muted-foreground whitespace-pre-wrap mt-1 text-xs">
-                            {occurrence?.descricao_detalhada}
+                            {occurrence?.observacao}
                         </p>
                     </div>
 

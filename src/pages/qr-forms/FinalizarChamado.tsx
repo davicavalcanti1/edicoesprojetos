@@ -9,8 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const N8N_URLS = {
-    dispenser: "https://n8n.imagoradiologia.cloud/webhook/Dispenser",
-    banheiro: "https://n8n.imagoradiologia.cloud/webhook/Banheiro",
+    dispenser: "https://n8n.imagoradiologia.cloud/webhook/Tickets/",
+    banheiro: "https://n8n.imagoradiologia.cloud/webhook/banheiro/",
 };
 
 export default function FinalizarChamado() {
@@ -55,11 +55,11 @@ export default function FinalizarChamado() {
 
             // Verifica se já está concluída - status field varies?
             // All tables have 'status' text or enum
-            if ((data as any).status === "concluido" || (data as any).status === "concluida") {
+            if ((data as any).status === "concluido" || (data as any).status === "concluida" || (data as any).status === "resolvido") {
                 setError("Este chamado já foi finalizado.");
             }
 
-            setOccurrence({ ...data, _tableName: table });
+            setOccurrence({ ...(data as any), _tableName: table });
         } catch (err: any) {
             console.error("Erro ao carregar chamado:", err);
             setError(err.message || "Erro ao carregar detalhes do chamado.");
@@ -184,7 +184,7 @@ export default function FinalizarChamado() {
                     <div className="mb-6 p-4 rounded-lg bg-secondary/50 border border-secondary text-sm">
                         <p className="font-semibold text-foreground/80">Detalhes:</p>
                         <p className="text-muted-foreground whitespace-pre-wrap mt-1">
-                            {occurrence?.descricao}
+                            {occurrence?.observacao || occurrence?.descricao}
                         </p>
                     </div>
 

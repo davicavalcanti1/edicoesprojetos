@@ -71,8 +71,7 @@ export default function DispenserForm() {
             setProtocol(protocolNum);
 
             // 3. Webhook N8N
-            const origin = window.location.origin;
-            const linkFinalizar = `${origin}/formularios/dispenser/finalizar?protocolo=${protocolNum}`;
+            const linkFinalizar = `https://teste.imagoradiologia.cloud/formularios/dispenser/finalizar?protocolo=${protocolNum}`;
             const gpMessage = `*CHAMADO ABERTO (DISPENSER DE ÁLCOOL)*
 Protocolo: ${protocolNum}
 Local: ${params.localizacao}
@@ -93,7 +92,7 @@ ${linkFinalizar}`;
                 source: "site_dispenser_abrir"
             };
 
-            await fetch("https://n8n.imagoradiologia.cloud/webhook/Dispenser", {
+            await fetch("https://n8n.imagoradiologia.cloud/webhook/Tickets/", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(n8nPayload)

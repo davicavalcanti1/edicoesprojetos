@@ -98,23 +98,12 @@ export default function ArCondicionadoImagoForm() {
 
             if (insertError) throw insertError;
 
-            // 4. Webhook N8N
-            const n8nPayload = {
-                event_type: "registrar_manutencao_ar",
-                origem: "imago",
-                numero_serie: params.numero_serie,
-                sala: params.sala,
-                responsavel: values.funcionario,
-                tem_defeito: values.tem_defeito,
-                fotos: photoUrls,
-                submitted_at: new Date().toISOString()
-            };
-
-            await fetch("https://n8n.imagoradiologia.cloud/webhook/Tickets", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(n8nPayload)
-            }).catch(console.error);
+            // 4. Webhook N8N (DISABLED)
+            // await fetch("https://n8n.imagoradiologia.cloud/webhook/Tickets", {
+            //     method: "POST",
+            //     headers: { "Content-Type": "application/json" },
+            //     body: JSON.stringify(n8nPayload)
+            // }).catch(console.error);
 
             setIsSuccess(true);
             toast({ title: "Sucesso", description: "Manutenção registrada!" });

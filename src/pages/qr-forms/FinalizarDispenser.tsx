@@ -21,7 +21,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-const N8N_DISPENSER_WEBHOOK = "https://n8n.imagoradiologia.cloud/webhook/Dispenser";
+const N8N_DISPENSER_WEBHOOK = "https://n8n.imagoradiologia.cloud/webhook/Tickets/";
 
 const formSchema = z.object({
     funcionario: z.string().min(3, "Nome do funcionário é obrigatório"),
@@ -138,7 +138,7 @@ Observações: ${values.observacoes || "Sem observação"}`;
             };
 
             // Enviar webhook
-            await fetch("https://n8n.imagoradiologia.cloud/webhook/Tickets", {
+            await fetch("https://n8n.imagoradiologia.cloud/webhook/Tickets/", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(n8nPayload)

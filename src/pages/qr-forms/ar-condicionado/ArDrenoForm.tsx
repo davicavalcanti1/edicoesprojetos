@@ -87,23 +87,12 @@ export default function ArDrenoForm() {
 
             if (insertError) throw insertError;
 
-            // 3. Webhook N8N
-            const n8nPayload = {
-                event_type: "registrar_manutencao_ar",
-                origem: "dreno",
-                numero_serie: params.numero_serie,
-                sala: params.sala,
-                responsavel: values.tecnico,
-                custo: values.custo,
-                fotos: photoUrls,
-                submitted_at: new Date().toISOString()
-            };
-
-            await fetch("https://n8n.imagoradiologia.cloud/webhook/Tickets", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(n8nPayload)
-            }).catch(console.error);
+            // 3. Webhook N8N (DISABLED)
+            // await fetch("https://n8n.imagoradiologia.cloud/webhook/Tickets", {
+            //     method: "POST",
+            //     headers: { "Content-Type": "application/json" },
+            //     body: JSON.stringify(n8nPayload)
+            // }).catch(console.error);
 
             setIsSuccess(true);
             toast({ title: "Sucesso", description: "Limpeza de Dreno salva!" });

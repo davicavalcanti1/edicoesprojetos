@@ -67,7 +67,9 @@ export default function ArCondicionadoForm() {
                 metadata: { ...params }
             };
 
-            const success = await sendQrForm(payload);
+            // const success = await sendQrForm(payload);
+            // Webhook disabled for AC
+            const success = true;
 
             if (success) {
                 setIsSuccess(true);
