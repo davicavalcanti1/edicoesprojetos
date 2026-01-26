@@ -24,6 +24,7 @@ interface Profile {
   updated_at: string | null;
   last_login_at: string | null;
   last_login_ip: string | null;
+  role: AppRole; // role is in profiles table
 }
 
 interface AuthContextType {
@@ -81,25 +82,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setTenant(tenantData as Tenant);
         }
 
-        // Fetch role
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', userId)
-          .maybeSingle();
-
-        if (roleError) {
-          console.error('Error fetching role:', roleError);
-          setRole('user'); // Default to user on error
-        } else if (roleData) {
-          setRole(roleData.role as AppRole);
+        // Fetch role - NOW FROM PROFILES DIRECTLY
+        const profileWithRole = profileData as any;
+        if (profileWithRole.role) {
+          setRole(profileWithRole.role as AppRole);
         } else {
-          setRole('user'); // Default to user if no role found
+          setRole('user');
         }
       }
     } catch (error) {
       console.error('Error in fetchUserData:', error);
-      setRole('user'); // Fallback
+      setRole('user');
     }
   };
 

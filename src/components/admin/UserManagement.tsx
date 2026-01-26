@@ -118,28 +118,17 @@ export function UserManagement() {
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["users", profile?.tenant_id],
     queryFn: async () => {
+      // Fetch profiles (which now include role)
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, full_name, email, avatar_url, is_active, created_at")
+        .select("id, full_name, email, avatar_url, is_active, created_at, role" as any)
         .order("created_at", { ascending: false });
 
       if (profilesError) throw profilesError;
 
-      // Fetch roles for each user
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
-
-      if (rolesError) throw rolesError;
-
-      const roleMap = (roles || []).reduce((acc, r) => {
-        acc[r.user_id] = r.role;
-        return acc;
-      }, {} as Record<string, "admin" | "user" | "estoque" | "rh">);
-
-      return (profiles || []).map((p) => ({
+      return (profiles || []).map((p: any) => ({
         ...p,
-        role: roleMap[p.id] || "user",
+        role: p.role || "user",
       })) as UserWithRole[];
     },
     enabled: !!profile?.tenant_id,
@@ -205,9 +194,9 @@ export function UserManagement() {
   const updateRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: "admin" | "user" | "estoque" | "rh" }) => {
       const { error } = await supabase
-        .from("user_roles")
-        .update({ role })
-        .eq("user_id", userId);
+        .from("profiles")
+        .update({ role } as any)
+        .eq("id", userId);
 
       if (error) throw error;
     },
