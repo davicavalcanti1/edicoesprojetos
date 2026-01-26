@@ -203,11 +203,17 @@ Observações: ${values.observacoes || "Sem observação"}`;
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="mb-6 p-4 rounded-lg bg-secondary/50 border border-secondary text-sm">
-                        <p className="font-semibold text-foreground/80">Detalhes do Chamado:</p>
-                        <p className="text-muted-foreground whitespace-pre-wrap mt-1 text-xs">
-                            {occurrence?.observacao}
-                        </p>
+                    <div className="mb-6 p-4 rounded-lg bg-secondary/50 border border-secondary text-sm space-y-2">
+                        <div>
+                            <p className="font-semibold text-foreground/80">Problema Relatado:</p>
+                            <p className="text-foreground">{occurrence?.problema || "Não especificado"}</p>
+                        </div>
+                        <div>
+                            <p className="font-semibold text-foreground/80">Descrição / Detalhes:</p>
+                            <p className="text-muted-foreground whitespace-pre-wrap mt-1 text-xs">
+                                {occurrence?.observacao || "Sem observações adicionais"}
+                            </p>
+                        </div>
                     </div>
 
                     <Form {...form}>
