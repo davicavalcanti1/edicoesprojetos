@@ -67,11 +67,12 @@ export default function DispenserForm() {
 
             if (error) throw error;
 
-            const protocolNum = novoChamado.protocolo;
+            const protocolNum = (novoChamado as any).protocolo;
             setProtocol(protocolNum);
 
             // 3. Webhook N8N
-            const linkFinalizar = `https://teste.imagoradiologia.cloud/formularios/dispenser/finalizar?protocolo=${protocolNum}`;
+            const origin = window.location.origin;
+            const linkFinalizar = `${origin}/formularios/dispenser/finalizar?protocolo=${protocolNum}`;
             const gpMessage = `*CHAMADO ABERTO (DISPENSER DE ÁLCOOL)*
 Protocolo: ${protocolNum}
 Local: ${params.localizacao}

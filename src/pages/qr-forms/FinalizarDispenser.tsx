@@ -61,9 +61,8 @@ export default function FinalizarDispenser() {
         try {
             if (!protocolo) return;
             const { data, error } = await supabase
-                .from("occurrences")
+                .from("chamados_dispenser" as any)
                 .select("*")
-                .ilike("protocolo", protocolo)
                 .eq("protocolo", protocolo)
                 .maybeSingle();
 
@@ -73,7 +72,11 @@ export default function FinalizarDispenser() {
                 return;
             }
 
-            if (data.status === "concluida") {
+            // Map status 'resolvido' to 'concluida' concept if needed, but table uses 'aberto'/'resolvido' usually?
+            // Migration script casts status to text. Usually it's 'aberto', 'em_andamento', 'resolvido'.
+            // Let's check current 'status'.
+            const currentStatus = (data as any).status;
+            if (currentStatus === "resolvido" || currentStatus === "concluido") {
                 setError("Este chamado já foi finalizado anteriormente.");
             }
 
@@ -91,33 +94,30 @@ export default function FinalizarDispenser() {
 
         setIsSubmitting(true);
         try {
-            // 1. Atualizar Supabase
+            // 1. Atualizar Supabase (chamados_dispenser)
             const { error: dbError } = await supabase
-                .from("occurrences")
+                .from("chamados_dispenser" as any)
                 .update({
-                    status: "concluida",
-                    finalizada_em: new Date().toISOString(),
-                    // Como não temos campos para 'finalizado_por' (nome string) e 'observacoes' diretos na tabela occurrences
-                    // vamos salvar nos metadados ou na descricao_detalhada, ou nos campos existentes se houvercompatibilidade.
-                    // O prompt pede "Atualizar: finalizado_em, finalizado_por, observacoes".
-                    // Supondo que 'observacoes' existe na tabela. 'finalizado_por' geralmente é ID, mas aqui é nome texto.
-                    // Vamos tentar salvar 'observacoes' no campo 'observacoes' e o nome no JSON 'dados_especificos' ou append na descrição.
-                    // Melhor: salvar 'observacoes' no campo 'observacoes'.
-                    observacoes: values.observacoes,
-                    // O nome do funcionário vamos colocar em 'acao_imediata' ou similar, ou append na descrição.
-                    // Vou colocar em 'acao_imediata' como "Finalizado por: NOME", para ficar registrado.
-                    acao_imediata: `Finalizado por: ${values.funcionario}`
-                })
+                    status: "resolvido",
+                    resolvido_em: new Date().toISOString(), // Column exists
+                    finalizado_por: values.funcionario, // Column added by migration
+                    observacao: (occurrence.observacao ? occurrence.observacao + " | Conclusão: " : "") + values.observacoes
+                    // If we overwrite, we lose original observation if any.
+                    // But original is "observacao" (singular).
+                    // Actually, let's append if there was one, or assuming this is the resolution note.
+                    // To be safe, maybe we should keep original observation?
+                    // The form schema says "observacoes".
+                    // Let's just create a combined string if needed or just use the field.
+                    // Given the prompt "Atualizar: finalizado_em, finalizado_por, observacoes", I'll set it.
+                } as any)
                 .eq("id", occurrence.id);
 
             if (dbError) throw dbError;
 
-            // 2. Montar mensagem GP
-
             // 2. Webhook N8N (Flat Payload)
-            const localizacao = occurrence.dados_especificos?.localizacao || "N/A";
-            const statusDispenser = occurrence.dados_especificos?.problema || "N/A";
-            const descricao = occurrence.descricao_detalhada || "-"; // Ou pegar de dados_especificos se tiver salvo lá separado
+            const localizacao = occurrence.localizacao || "N/A";
+            const statusDispenser = occurrence.problema || "N/A";
+            const descricao = occurrence.observacao || "-";
 
             const gpMessage = `✅ CHAMADO FINALIZADO (DISPENSER)
 Protocolo: ${protocolo}

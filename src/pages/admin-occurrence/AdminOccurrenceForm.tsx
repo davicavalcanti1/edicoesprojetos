@@ -30,6 +30,7 @@ import { ADMIN_OCCURRENCE_TYPES } from "@/lib/admin-occurrence-types";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { downloadAdminOccurrencePDF } from "@/lib/pdf/admin-occurrence-pdf";
+import { AdminOccurrenceRecord } from "@/types/admin-occurrence";
 
 import { EMPLOYEES } from "@/constants/employees";
 
@@ -112,33 +113,41 @@ export default function AdminOccurrenceForm() {
                 });
             }
 
-            // 2. Insert into administrative_occurrences
-            // Casting to any to avoid type errors since Types aren't updated yet with new table
+            // 2. Insert into ocorrencias_adm (using correct schema columns)
             const { data, error } = await supabase
-                .from('administrative_occurrences' as any)
+                .from('ocorrencias_adm' as any)
                 .insert({
                     tenant_id: (await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()).data?.tenant_id,
                     employee_name: values.employeeName,
                     occurrence_date: format(values.date, 'yyyy-MM-dd'),
                     type: selectedType.label,
                     subtype: selectedSubtype.label,
-                    description: values.description,
-                    created_by: user.id,
+                    descricao: values.description, // Mapped to 'descricao'
+                    criado_por: user.id, // Mapped to 'criado_por'
                     attachments: attachments,
+                    titulo: `${selectedType.label} - ${values.employeeName}`, // Necessary for base schema
+                    categoria: selectedType.label
                 } as any)
                 .select()
                 .single();
 
             if (error) throw error;
 
+            const record = data as unknown as AdminOccurrenceRecord;
+
             toast({
                 title: "Ocorrência registrada",
-                description: `Protocolo: ${(data as any).protocol}`,
+                description: `Protocolo: ${record.protocolo}`,
             });
 
             // Generate PDF
             try {
-                downloadAdminOccurrencePDF(data as any);
+                // Adapt data to PDF generator expectation if needed
+                downloadAdminOccurrencePDF({
+                    ...record,
+                    protocol: record.protocolo,
+                    description: record.descricao
+                } as any);
             } catch (pdfError) {
                 console.error("PDF generation failed:", pdfError);
                 toast({
@@ -148,7 +157,7 @@ export default function AdminOccurrenceForm() {
                 });
             }
 
-            navigate(`/ocorrencias/admin/${(data as any).id}`);
+            navigate(`/ocorrencias/admin/${record.id}`);
 
         } catch (error: any) {
             console.error(error);

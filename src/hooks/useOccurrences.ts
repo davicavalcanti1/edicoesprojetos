@@ -52,11 +52,11 @@ export function useOccurrences() {
         id: item.id,
         protocolo: item.protocolo,
         tipo: 'administrativa' as const,
-        subtipo: item.categoria,
+        subtipo: item.subtype || item.categoria,
         status: item.status,
         descricao: item.descricao,
-        criado_em: item.criado_em,
-        criado_por: item.criado_por,
+        criado_em: item.created_at || item.criado_em,
+        criado_por: item.criado_por || item.user_id, // fallback just in case
         original_table: 'ocorrencias_adm',
         raw_data: item
       }));
@@ -130,7 +130,7 @@ export function useOccurrence(id: string | undefined) {
           .maybeSingle();
 
         if (data) {
-          return { ...data, original_table: table } as any;
+          return { ...(data as object), original_table: table } as any;
         }
       }
 

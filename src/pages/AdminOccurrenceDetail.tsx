@@ -27,6 +27,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadAdminOccurrencePDF } from "@/lib/pdf/admin-occurrence-pdf";
 
+import { AdminOccurrenceRecord } from "@/types/admin-occurrence";
+
 export default function AdminOccurrenceDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -45,8 +47,9 @@ export default function AdminOccurrenceDetail() {
 
     const fetchOccurrence = async () => {
         setIsLoading(true);
+        // Cast to unknown first to bypass the strict generated types that might be outdated
         const { data, error } = await supabase
-            .from("administrative_occurrences" as any)
+            .from("ocorrencias_adm" as any)
             .select("*")
             .eq("id", id)
             .single();
@@ -59,10 +62,16 @@ export default function AdminOccurrenceDetail() {
             });
             navigate("/ocorrencias");
         } else {
-            setOccurrence(data);
-            // If already signed, pre-fill? No, they come from DB as paths potentially?
-            // For now we just check if they exist in DB to determine status, 
-            // but if we are collecting new ones we use state.
+            const record = data as unknown as AdminOccurrenceRecord;
+            // Normalize data to match component expectations
+            const normalized = {
+                ...record,
+                protocol: record.protocolo,
+                description: record.descricao,
+                created_by: record.criado_por,
+                created_at: record.created_at || record.criado_em
+            };
+            setOccurrence(normalized);
         }
         setIsLoading(false);
     };
@@ -82,11 +91,6 @@ export default function AdminOccurrenceDetail() {
         }
 
         try {
-            // 1. Upload images to storage (optional, or save dataURL directly if small? 
-            // DataURLs are large text. Better to upload.
-            // But for simplicity/speed let's assume we can save to text field or upload.
-            // Implementation plan said "coordinator_signature_path".
-
             const uploadSignature = async (dataUrl: string, name: string) => {
                 const blob = await (await fetch(dataUrl)).blob();
                 const fileName = `signatures/${id}/${name}_${Date.now()}.png`;
@@ -96,7 +100,6 @@ export default function AdminOccurrenceDetail() {
 
                 if (uploadError) throw uploadError;
 
-                // Get Public URL
                 const { data } = supabase.storage.from('occurrence-attachments').getPublicUrl(fileName);
                 return data.publicUrl;
             };
@@ -104,9 +107,9 @@ export default function AdminOccurrenceDetail() {
             const coordUrl = await uploadSignature(signatures.coordinator, 'coordinator');
             const empUrl = await uploadSignature(signatures.employee, 'employee');
 
-            // 2. Update Record
+            // Update Record using the correct table
             const { error } = await supabase
-                .from("administrative_occurrences" as any)
+                .from("ocorrencias_adm" as any)
                 .update({
                     coordinator_signature_path: coordUrl,
                     employee_signature_path: empUrl,
@@ -270,18 +273,22 @@ export default function AdminOccurrenceDetail() {
                             </CardHeader>
                             <CardContent>
                                 <div className="flex flex-wrap gap-2">
-                                    {occurrence.attachments.map((url: string, index: number) => (
-                                        <a
-                                            key={index}
-                                            href={url}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="flex items-center gap-2 p-2 border rounded-lg hover:bg-muted font-mono text-xs"
-                                        >
-                                            <FileText className="h-4 w-4" />
-                                            Anexo {index + 1}
-                                        </a>
-                                    ))}
+                                    {occurrence.attachments.map((item: any, index: number) => {
+                                        const url = typeof item === 'string' ? item : item.url;
+                                        const name = typeof item === 'string' ? `Anexo ${index + 1}` : item.name;
+                                        return (
+                                            <a
+                                                key={index}
+                                                href={url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="flex items-center gap-2 p-2 border rounded-lg hover:bg-muted font-mono text-xs"
+                                            >
+                                                <FileText className="h-4 w-4" />
+                                                {name}
+                                            </a>
+                                        );
+                                    })}
                                 </div>
                             </CardContent>
                         </Card>
