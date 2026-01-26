@@ -90,12 +90,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (roleError) {
           console.error('Error fetching role:', roleError);
+          setRole('user'); // Default to user on error
         } else if (roleData) {
           setRole(roleData.role as AppRole);
+        } else {
+          setRole('user'); // Default to user if no role found
         }
       }
     } catch (error) {
       console.error('Error in fetchUserData:', error);
+      setRole('user'); // Fallback
     }
   };
 

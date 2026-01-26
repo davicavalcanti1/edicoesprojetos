@@ -1,4 +1,4 @@
-export type AppRole = 'admin' | 'medico' | 'rh' | 'enfermagem' | 'estoque' | 'recepcao' | 'user';
+export type AppRole = 'admin' | 'rh' | 'enfermagem' | 'estoque' | 'recepcao' | 'user';
 
 export type TicketStatus = 'aberto' | 'em_andamento' | 'concluido' | 'cancelado';
 
