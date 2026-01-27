@@ -106,7 +106,7 @@ export function SendToDoctorModal({
 
       // Update occurrence with token and doctor info
       const { error: updateError } = await supabase
-        .from("occurrences")
+        .from("ocorrencias_adm")
         .update({
           public_token: publicToken,
           medico_destino: medicoSelecionado?.nome,
@@ -120,22 +120,23 @@ export function SendToDoctorModal({
 
       // Fetch attachments with signed URLs to send in webhook
       const { data: attachmentsData } = await supabase
-        .from("occurrence_attachments")
+        .from("attachments")
         .select("*")
-        .eq("occurrence_id", occurrenceId);
+        .eq("origin_id", occurrenceId)
+        .eq("origin_table", "ocorrencias_adm");
 
       let attachmentsForWebhook: any[] = [];
       if (attachmentsData && attachmentsData.length > 0) {
         attachmentsForWebhook = await Promise.all(
           attachmentsData.map(async (att: any) => {
             const { data: urlData } = await supabase.storage
-              .from("occurrence-attachments")
+              .from("attachments")
               .createSignedUrl(att.file_url, 60 * 60 * 24 * 7); // 7 days
             return {
               file_name: att.file_name,
               mime_type: att.file_type,
               file_url: urlData?.signedUrl || null,
-              is_image: att.is_image ?? att.file_type?.startsWith("image/"),
+              is_image: att.is_image,
             };
           })
         );

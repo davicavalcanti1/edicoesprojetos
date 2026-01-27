@@ -53,6 +53,10 @@ export async function generateAndStorePdf(dbOcc: DbOccurrence): Promise<string |
     // Ensure public status token exists for QR code
     let publicToken = dbOcc.public_token;
 
+    // Use the original table from the occurrence object, defaulting to 'ocorrencias_adm' if missing
+    // (Though practically it should be there if coming from the hook)
+    const targetTable = (dbOcc as any).original_table || 'ocorrencias_adm';
+
     if (!publicToken) {
       // Generate a new token if one doesn't exist
       const array = new Uint8Array(32);
@@ -61,7 +65,7 @@ export async function generateAndStorePdf(dbOcc: DbOccurrence): Promise<string |
 
       // Save it to the database immediately
       const { error: tokenError } = await supabase
-        .from("occurrences")
+        .from(targetTable as any)
         .update({ public_token: publicToken })
         .eq("id", dbOcc.id);
 
@@ -74,19 +78,20 @@ export async function generateAndStorePdf(dbOcc: DbOccurrence): Promise<string |
     let firstImageBase64: string | undefined;
 
     const { data: attachments } = await supabase
-      .from("occurrence_attachments")
+      .from("attachments")
       .select("file_url, file_type")
-      .eq("occurrence_id", dbOcc.id)
+      .eq("origin_id", dbOcc.id)
+      .eq("origin_table", targetTable)
       .limit(1);
 
     if (attachments && attachments.length > 0) {
       const att = attachments[0];
       // Only process if it is an image
-      if (att.file_type && att.file_type.startsWith("image/")) {
+      if (att.file_type && (att.file_type.startsWith("image/") || (att as any).is_image)) {
         try {
           // Download the image
           const { data: blob } = await supabase.storage
-            .from("occurrence-attachments")
+            .from("attachments")
             .download(att.file_url);
 
           if (blob) {
@@ -142,7 +147,7 @@ export async function generateAndStorePdf(dbOcc: DbOccurrence): Promise<string |
 
     // Store the file path (not URL) - we'll generate signed URLs when needed
     const { error: updateError } = await supabase
-      .from("occurrences")
+      .from(targetTable as any)
       .update({
         pdf_conclusao_url: filePath,
         pdf_gerado_em: new Date().toISOString(),

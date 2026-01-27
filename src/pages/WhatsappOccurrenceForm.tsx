@@ -54,16 +54,22 @@ export default function WhatsappOccurrenceForm() {
 
                 // Description
                 descricao_detalhada: data.descricao,
+                descricao: data.descricao, // Populate both for compatibility
 
                 // Triage & Outcome (Classificação e Desfecho)
-                classificacao_triagem: data.triagem,
-                tipo_desfecho: data.desfecho,
+                triage_classification: data.triagem,
+                // Wrap desfecho in array as outcome_actions is text[]
+                outcome_actions: [data.desfecho],
 
                 // Status & Metadata
                 status: "concluida",
-                origem: "whatsapp",
+                origin: "whatsapp",
                 criado_em: new Date().toISOString(),
                 finalizado_em: new Date().toISOString(), // Closed immediately
+
+                // Set outcome info since it's closed
+                outcome_completed_at: new Date().toISOString(),
+                outcome_note: data.observacoes_fechamento || "Registro retroativo via WhatsApp",
 
                 // Closing remarks
                 observacoes: data.observacoes_fechamento || "Registro retroativo via WhatsApp",
@@ -99,9 +105,12 @@ export default function WhatsappOccurrenceForm() {
 
             // @ts-ignore
             const { data: inserted, error } = await supabase
-                .from("occurrences")
+                .from("ocorrencias_adm")
                 .insert({
                     ...occurrenceData,
+                    titulo: `WPP - ${data.paciente_nome}`,
+                    categoria: "Assistencial",
+                    prioridade: "media"
                     // We need to omit tenant_id unless we know it. 
                     // If the user is logged in, use their tenant. If not, we have a problem.
                     // I'll assume user is logged in for "staff" operations.

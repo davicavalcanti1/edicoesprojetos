@@ -44,7 +44,7 @@ export default function PublicImageGallery() {
             try {
                 // Fetch occurrence by token - NO SUBTYPE FILTER, allowing any authorized PDF viewer to see images
                 const { data, error } = await (supabase
-                    .from("occurrences")
+                    .from("ocorrencias_adm")
                     .select(
                         "id, protocolo, paciente_nome_completo, paciente_data_hora_evento, status, public_token"
                     )
@@ -61,17 +61,18 @@ export default function PublicImageGallery() {
 
                     // Fetch attachments with signed URLs
                     const { data: attachmentsData } = await supabase
-                        .from("occurrence_attachments")
+                        .from("attachments")
                         .select("*")
-                        .eq("occurrence_id", data.id)
-                        .order("uploaded_em", { ascending: true });
+                        .eq("origin_id", data.id)
+                        .eq("origin_table", "ocorrencias_adm")
+                        .order("uploaded_at", { ascending: true });
 
                     if (attachmentsData && attachmentsData.length > 0) {
                         // Generate signed URLs for each attachment
                         const attachmentsWithUrls = await Promise.all(
                             attachmentsData.map(async (att: any) => {
                                 const { data: urlData } = await supabase.storage
-                                    .from("occurrence-attachments")
+                                    .from("attachments")
                                     .createSignedUrl(att.file_url, 60 * 60 * 24 * 7); // 7 days
 
                                 return {

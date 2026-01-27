@@ -65,7 +65,7 @@ export default function BanheiroForm() {
 
             if (error) throw error;
 
-            const protocolNum = novoChamado.protocolo;
+            const protocolNum = (novoChamado as any).protocolo;
             setProtocol(protocolNum);
 
             // 3. Webhook N8N

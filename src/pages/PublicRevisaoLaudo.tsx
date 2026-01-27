@@ -65,12 +65,11 @@ export default function PublicRevisaoLaudo() {
 
       try {
         const { data, error } = await (supabase
-          .from("occurrences")
+          .from("ocorrencias_adm")
           .select(
             "id, protocolo, paciente_nome_completo, paciente_id, paciente_tipo_exame, paciente_unidade_local, paciente_data_hora_evento, paciente_sexo, paciente_telefone, descricao_detalhada, mensagem_admin_medico, mensagem_medico, status, medico_destino, encaminhada_em, finalizada_em"
           )
           .eq("public_token", token)
-          .eq("subtipo", "revisao_exame")
           .maybeSingle() as any);
 
         if (error) {
@@ -82,24 +81,25 @@ export default function PublicRevisaoLaudo() {
           setOccurrence(data as PublicOccurrence);
           setMensagemMedico(data.mensagem_medico || "");
 
-          // Fetch attachments with signed URLs
+          // Fetch attachments with signed URLs from new polymorphic table
           const { data: attachmentsData } = await supabase
-            .from("occurrence_attachments")
+            .from("attachments")
             .select("*")
-            .eq("occurrence_id", data.id)
-            .order("uploaded_em", { ascending: true });
+            .eq("origin_id", data.id)
+            .eq("origin_table", "ocorrencias_adm")
+            .order("uploaded_at", { ascending: true }); // Note: updated_at/uploaded_at column check
 
           if (attachmentsData && attachmentsData.length > 0) {
             // Generate signed URLs for each attachment
             const attachmentsWithUrls = await Promise.all(
               attachmentsData.map(async (att: any) => {
                 const { data: urlData } = await supabase.storage
-                  .from("occurrence-attachments")
+                  .from("attachments")
                   .createSignedUrl(att.file_url, 60 * 60 * 24 * 7); // 7 days
 
                 return {
                   ...att,
-                  is_image: att.is_image ?? att.file_type?.startsWith("image/"),
+                  is_image: att.is_image,
                   signed_url: urlData?.signedUrl || null,
                 };
               })
@@ -133,7 +133,7 @@ export default function PublicRevisaoLaudo() {
     try {
       // 1. Update Supabase (Message only)
       const { error } = await supabase
-        .from("occurrences")
+        .from("ocorrencias_adm")
         .update({ mensagem_medico: mensagemMedico })
         .eq("public_token", token);
 

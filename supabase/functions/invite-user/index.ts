@@ -263,7 +263,7 @@ serve(async (req: Request) => {
     // Generate password reset link so user can set their own password
 
     const SITE_URL =
-      Deno.env.get("SITE_URL") || "https://ocorrencias.imagoradiologia.cloud";
+      Deno.env.get("SITE_URL") || "https://teste.imagoradiologia.cloud";
 
     const { data: resetData, error: resetError } =
       await supabaseAdmin.auth.admin.generateLink({
