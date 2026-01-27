@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { CheckCircle2, FileText, Paperclip, AlignLeft, ArrowLeft, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { OccurrenceStatus, statusConfig } from "@/types/occurrence";
 
 export default function AdminOccurrenceDetail() {
     const { id } = useParams();
@@ -62,11 +63,11 @@ export default function AdminOccurrenceDetail() {
                     <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
-                    <h1 className="text-2xl font-bold tracking-tight">
+                    <h1 className="text-2xl font-bold tracking-tight flex items-center">
                         Ocorrência {occurrence.protocolo}
                         {occurrence.status && (
-                            <span className="ml-3 text-sm font-normal px-2 py-1 bg-muted rounded-full">
-                                {occurrence.status}
+                            <span className={`ml-3 text-sm font-normal px-2 py-1 rounded-full ${statusConfig[occurrence.status as OccurrenceStatus]?.bgColor || "bg-gray-100"} ${statusConfig[occurrence.status as OccurrenceStatus]?.color || "text-gray-800"}`}>
+                                {statusConfig[occurrence.status as OccurrenceStatus]?.label || occurrence.status}
                             </span>
                         )}
                     </h1>
@@ -74,7 +75,7 @@ export default function AdminOccurrenceDetail() {
                     {/* ACTIONS BAR */}
                     <div className="ml-auto flex items-center gap-2">
                         {/* Action: Send to Doctor */}
-                        {occurrence.status === 'aguardando_envio' && (
+                        {isMedicalReview && (occurrence.status === 'aguardando_envio' || occurrence.status === 'registrada' || occurrence.status === 'pendente') && (
                             <Button
                                 onClick={() => setSendToDoctorOpen(true)}
                                 className="bg-indigo-600 hover:bg-indigo-700 text-white"
@@ -85,7 +86,7 @@ export default function AdminOccurrenceDetail() {
                         )}
 
                         {/* Action: Mark as Unfounded (Available in early stages) */}
-                        {(occurrence.status === 'aguardando_envio' || occurrence.status === 'registrada') && (
+                        {(occurrence.status === 'aguardando_envio' || occurrence.status === 'registrada' || occurrence.status === 'pendente') && (
                             <Button
                                 variant="outline"
                                 className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
@@ -118,7 +119,6 @@ export default function AdminOccurrenceDetail() {
                     pacienteDataHoraEvento={(occurrence as any).paciente?.dataHoraEvento}
                     onSuccess={() => {
                         // Invalidate query to refresh status
-                        // Simplified: The list view will update, for details view react-query might auto-refetch or we can force it
                         window.location.reload();
                     }}
                 />
