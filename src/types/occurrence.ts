@@ -6,6 +6,9 @@ export type OccurrenceSubtype = string;
 
 export type OccurrenceStatus =
   | "registrada"
+  | "aguardando_envio" // New initial state for Revisao Laudo
+  | "aguardando_medico" // Sent to doctor
+  | "aguardando_triagem" // Doctor finished, waiting admin
   | "em_triagem"
   | "em_analise"
   | "acao_em_andamento"
@@ -127,6 +130,9 @@ export interface DbOccurrence extends Occurrence {
 
 export const statusConfig: Record<OccurrenceStatus, { label: string; description?: string; color: string; bgColor: string }> = {
   registrada: { label: "Registrada", description: "Ocorrência registrada e aguardando triagem.", color: "text-blue-700", bgColor: "bg-blue-50" },
+  aguardando_envio: { label: "Aguardando Envio", description: "Aguardando envio para o médico.", color: "text-slate-700", bgColor: "bg-slate-100" },
+  aguardando_medico: { label: "Aguardando Médico", description: "Enviado para análise médica.", color: "text-indigo-700", bgColor: "bg-indigo-50" },
+  aguardando_triagem: { label: "Aguardando Triagem", description: "Análise médica concluída, aguardando triagem.", color: "text-amber-700", bgColor: "bg-amber-50" },
   pendente: { label: "Pendente", color: "text-blue-700", bgColor: "bg-blue-50" }, // Alias for registrada
   em_triagem: { label: "Em Triagem", description: "Ocorrência em processo de triagem.", color: "text-yellow-700", bgColor: "bg-yellow-50" },
   em_analise: { label: "Em Análise", description: "Ocorrência em análise detalhada.", color: "text-purple-700", bgColor: "bg-purple-50" },
@@ -142,6 +148,9 @@ export const statusConfig: Record<OccurrenceStatus, { label: string; description
 
 export const statusTransitions: Record<OccurrenceStatus, OccurrenceStatus[]> = {
   registrada: ["em_triagem", "improcedente"],
+  aguardando_envio: ["aguardando_medico", "improcedente"],
+  aguardando_medico: ["aguardando_triagem"],
+  aguardando_triagem: ["concluida", "improcedente"],
   em_triagem: ["em_analise", "improcedente"],
   em_analise: ["acao_em_andamento", "concluida", "improcedente"],
   acao_em_andamento: ["concluida"],

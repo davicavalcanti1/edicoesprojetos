@@ -55,6 +55,7 @@ export function useOccurrences() {
         descricao: item.descricao,
         criado_em: item.created_at || item.criado_em,
         criado_por: item.criado_por || item.user_id, // fallback just in case
+        paciente_nome: item.paciente_nome_completo || item.paciente_nome, // Mapped for list view
         original_table: 'ocorrencias_adm',
         raw_data: item
       }));
@@ -310,7 +311,7 @@ export function useCreateOccurrence() {
           descricao: data.descricao_detalhada || JSON.stringify(data.dados_especificos || {}),
           categoria: "Assistencial",
           prioridade: "alta",
-          status: "pendente",
+          status: "aguardando_envio",
           // Mapped fields for ocorrencias_adm
           paciente_nome_completo: paciente.nomeCompleto,
           paciente_telefone: paciente.telefone,

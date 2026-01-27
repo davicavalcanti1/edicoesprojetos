@@ -139,6 +139,26 @@ export function MedicalReviewDetails({ occurrence }: MedicalReviewDetailsProps) 
                 </Card>
             )}
 
+            {/* Doctor's Opinion Display */}
+            {occurrence.mensagem_medico && (
+                <Card className="border-l-4 border-l-blue-500 bg-blue-50/20">
+                    <CardHeader>
+                        <CardTitle className="text-lg flex items-center gap-2 text-blue-700">
+                            <Stethoscope className="h-5 w-5" />
+                            Parecer Médico
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        <div>
+                            <span className="text-sm font-semibold text-muted-foreground">Médico Responsável:</span> {occurrence.medico_destino || "Não identificado"}
+                        </div>
+                        <div className="bg-white/50 p-4 rounded-md border border-blue-100">
+                            <p className="whitespace-pre-wrap text-sm leading-relaxed">{occurrence.mensagem_medico}</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Outcome / Desfecho */}
             {(occurrence.desfecho_principal || occurrence.desfecho_justificativa) && (
                 <Card className="bg-green-50/50 border-green-100">

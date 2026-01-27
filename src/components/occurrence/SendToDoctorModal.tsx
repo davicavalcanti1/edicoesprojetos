@@ -112,7 +112,7 @@ export function SendToDoctorModal({
           medico_destino: medicoSelecionado?.nome,
           mensagem_admin_medico: mensagem,
           encaminhada_em: new Date().toISOString(),
-          status: "em_analise",
+          status: "aguardando_medico",
         })
         .eq("id", occurrenceId);
 

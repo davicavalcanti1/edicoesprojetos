@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-type KanbanStatus = "pendente" | "concluido";
+type KanbanStatus = "pendente" | "aguardando_envio" | "aguardando_medico" | "aguardando_triagem" | "concluido";
 
 interface KanbanColumn {
     id: KanbanStatus;
@@ -21,19 +21,31 @@ export function AdminKanbanBoard() {
     const navigate = useNavigate();
     const { data: occurrences = [], isLoading } = useAdministrativeOccurrences();
     const [columns, setColumns] = useState<KanbanColumn[]>([
-        { id: "pendente", title: "Pendente / Em Assinatura", items: [] },
+        { id: "aguardando_envio", title: "Aguardando Envio", items: [] },
+        { id: "aguardando_medico", title: "Aguardando Médico", items: [] },
+        { id: "aguardando_triagem", title: "Para Triagem", items: [] },
         { id: "concluido", title: "Concluído", items: [] },
     ]);
 
     useEffect(() => {
         if (occurrences.length > 0) {
-            const pendente = occurrences.filter(
-                (o) => o.status === "aberto" || o.status === "em_andamento"
+            const aguardandoEnvio = occurrences.filter(
+                (o) => o.status === "aguardando_envio" || o.status === "aberto" || o.status === "registrada"
             );
-            const concluido = occurrences.filter((o) => o.status === "concluido");
+            const aguardandoMedico = occurrences.filter(
+                (o) => o.status === "aguardando_medico"
+            );
+            const aguardandoTriagem = occurrences.filter(
+                (o) => o.status === "aguardando_triagem" || o.status === "em_analise" || o.status === "em_triagem"
+            );
+            const concluido = occurrences.filter(
+                (o) => o.status === "concluido" || o.status === "concluida"
+            );
 
             setColumns([
-                { id: "pendente", title: "Pendente / Em Assinatura", items: pendente },
+                { id: "aguardando_envio", title: "Aguardando Envio", items: aguardandoEnvio },
+                { id: "aguardando_medico", title: "Aguardando Médico", items: aguardandoMedico },
+                { id: "aguardando_triagem", title: "Para Triagem", items: aguardandoTriagem },
                 { id: "concluido", title: "Concluído", items: concluido },
             ]);
         }
@@ -57,9 +69,9 @@ export function AdminKanbanBoard() {
                     <div className="flex gap-6 h-full min-w-[1100px]">
                         {columns.map((column) => (
                             <div key={column.id} className="flex-1 min-w-[350px] flex flex-col bg-muted/30 rounded-xl border border-border/50">
-                                <div className={`p-4 border-b ${column.id === 'pendente' ? 'border-amber-200 bg-amber-50/50' : 'border-green-200 bg-green-50/50'} rounded-t-xl`}>
+                                <div className={`p-4 border-b ${column.id === 'concluido' ? 'border-green-200 bg-green-50/50' : 'border-amber-200 bg-amber-50/50'} rounded-t-xl`}>
                                     <div className="flex items-center justify-between">
-                                        <h3 className={`font-semibold ${column.id === 'pendente' ? 'text-amber-800' : 'text-green-800'}`}>
+                                        <h3 className={`font-semibold ${column.id === 'concluido' ? 'text-green-800' : 'text-amber-800'}`}>
                                             {column.title}
                                         </h3>
                                         <Badge variant="secondary" className="bg-white/80">

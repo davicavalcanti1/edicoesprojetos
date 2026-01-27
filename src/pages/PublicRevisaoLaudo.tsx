@@ -206,11 +206,11 @@ export default function PublicRevisaoLaudo() {
 
       // 1. Update Supabase (Message + Status)
       const { error } = await supabase
-        .from("occurrences")
+        .from("ocorrencias_adm")
         .update({
           mensagem_medico: mensagemMedico,
-          status: "concluida",
-          finalizada_em: finalDate,
+          status: "aguardando_triagem",
+          finalizada_em: finalDate, // Keeping finalization date for medical part
         })
         .eq("public_token", token);
 
@@ -220,8 +220,8 @@ export default function PublicRevisaoLaudo() {
       await supabase.from("occurrence_status_history").insert({
         occurrence_id: occurrence.id,
         status_de: occurrence.status as any,
-        status_para: "concluida",
-        alterado_por: occurrence.id, // Using occurrence ID as a proxy for "System/Doctor Link" since we don't have user ID
+        status_para: "aguardando_triagem",
+        alterado_por: occurrence.id,
         motivo: "Médico finalizou análise com parecer (Link Público)",
       });
 
@@ -236,7 +236,7 @@ export default function PublicRevisaoLaudo() {
             occurrence_id: occurrence.id,
             protocolo: occurrence.protocolo,
             mensagem_medico: mensagemMedico,
-            status: "concluida",
+            status: "aguardando_triagem",
             finalizada_em: finalDate,
             medico_destino: occurrence.medico_destino,
             paciente: occurrence.paciente_nome_completo,
@@ -252,7 +252,7 @@ export default function PublicRevisaoLaudo() {
           ? {
             ...prev,
             mensagem_medico: mensagemMedico,
-            status: "concluida",
+            status: "aguardando_triagem",
             finalizada_em: finalDate,
           }
           : null
@@ -284,10 +284,10 @@ export default function PublicRevisaoLaudo() {
 
       // 1. Update Supabase (Message + Status)
       const { error } = await supabase
-        .from("occurrences")
+        .from("ocorrencias_adm")
         .update({
           mensagem_medico: automaticMessage,
-          status: "concluida",
+          status: "aguardando_triagem",
           finalizada_em: finalDate,
         })
         .eq("public_token", token);
@@ -298,7 +298,7 @@ export default function PublicRevisaoLaudo() {
       await supabase.from("occurrence_status_history").insert({
         occurrence_id: occurrence.id,
         status_de: occurrence.status as any,
-        status_para: "concluida",
+        status_para: "aguardando_triagem",
         alterado_por: occurrence.id,
         motivo: "Médico acionou 'Laudo Mantido' (Link Público)",
       });
@@ -314,7 +314,7 @@ export default function PublicRevisaoLaudo() {
             occurrence_id: occurrence.id,
             protocolo: occurrence.protocolo,
             mensagem_medico: automaticMessage,
-            status: "concluida",
+            status: "aguardando_triagem",
             finalizada_em: finalDate,
             medico_destino: occurrence.medico_destino,
             paciente: occurrence.paciente_nome_completo,
@@ -330,7 +330,7 @@ export default function PublicRevisaoLaudo() {
           ? {
             ...prev,
             mensagem_medico: automaticMessage,
-            status: "concluida",
+            status: "aguardando_triagem",
             finalizada_em: finalDate,
           }
           : null
