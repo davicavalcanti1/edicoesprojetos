@@ -603,7 +603,7 @@ export function useCreateGenericOccurrence() {
       };
 
       const { data: res, error } = await (supabase
-        .from("ocorrencias_adm" as any) as any)
+        .from("ocorrencia_adm" as any) as any)
         .insert(payload)
         .select()
         .single();

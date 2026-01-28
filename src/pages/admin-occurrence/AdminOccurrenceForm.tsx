@@ -115,7 +115,7 @@ export default function AdminOccurrenceForm() {
 
             // 2. Insert into ocorrencias_adm (using correct schema columns)
             const { data, error } = await supabase
-                .from('ocorrencias_adm' as any)
+                .from('ocorrencia_adm' as any)
                 .insert({
                     tenant_id: (await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()).data?.tenant_id,
                     employee_name: values.employeeName,
