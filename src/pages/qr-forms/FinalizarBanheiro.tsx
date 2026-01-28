@@ -92,14 +92,24 @@ export default function FinalizarBanheiro() {
         setIsSubmitting(true);
         try {
             // 1. Atualizar Supabase
+            const updatePayload: any = {
+                status: "resolvido",
+                atualizado_em: new Date().toISOString()
+            };
+
+            // Add finalization fields (columns added by migration)
+            updatePayload.resolvido_em = new Date().toISOString();
+            updatePayload.finalizado_por = values.funcionario;
+
+            // Append to existing observation
+            const conclusao = `Finalizado por: ${values.funcionario}. ${values.observacoes || "Sem observações"}`;
+            updatePayload.observacao = occurrence.observacao
+                ? `${occurrence.observacao}\n\n--- CONCLUSÃO ---\n${conclusao}`
+                : conclusao;
+
             const { error: dbError } = await supabase
                 .from("chamados_banheiro" as any)
-                .update({
-                    status: "resolvido",
-                    resolvido_em: new Date().toISOString(),
-                    finalizado_por: values.funcionario,
-                    observacao: (occurrence.observacao ? occurrence.observacao + " | " : "") + `Conclusão: ${values.funcionario} - ${values.observacoes || "Sem obs"}`
-                })
+                .update(updatePayload)
                 .eq("id", occurrence.id);
 
             if (dbError) throw dbError;

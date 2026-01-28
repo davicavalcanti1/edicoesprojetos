@@ -83,36 +83,79 @@ export default function OccurrenceDetail() {
 
   useEffect(() => {
     if (occurrence) {
-      setPacienteSexo(occurrence.paciente_sexo || "");
-      setPacienteUnidade(occurrence.paciente_unidade_local || "");
-      setPacienteTipoExame(occurrence.paciente_tipo_exame || "");
-      setPacienteNome(occurrence.paciente_nome_completo || "");
-      setPacienteId(occurrence.paciente_id || "");
-      setDescricaoDetalhada(occurrence.descricao_detalhada || "");
-      setImpactoPercebido(occurrence.impacto_percebido || "");
-      setMedicoDestino(occurrence.medico_destino || "");
-      if (occurrence.paciente_data_nascimento) {
-        const [year, month, day] = occurrence.paciente_data_nascimento.split("-");
-        setPacienteDataNascimento(`${day}/${month}/${year}`);
-      } else {
-        setPacienteDataNascimento("");
+      // Handle schema differences between tables (Enf/Laudo/Adm)
+      const raw = occurrence;
+      const dadosAdicionais = raw.dados_adicionais || raw.dados_especificos || {};
+
+      setPacienteNome(
+        raw.paciente_nome ||
+        raw.paciente_nome_completo ||
+        dadosAdicionais.employee_name || // Support Admin Employee Name
+        ""
+      );
+
+      setPacienteSexo(raw.paciente_sexo || dadosAdicionais.sexo || dadosAdicionais.paciente_sexo || "");
+
+      setPacienteUnidade(
+        raw.paciente_unidade_local ||
+        raw.exame_unidade ||
+        dadosAdicionais.unidade ||
+        dadosAdicionais.unidadeLocal ||
+        ""
+      );
+
+      setPacienteTipoExame(
+        raw.paciente_tipo_exame ||
+        raw.exame_tipo ||
+        dadosAdicionais.tipoExame ||
+        ""
+      );
+
+      setPacienteId(
+        raw.paciente_id ||
+        raw.paciente_prontuario ||
+        dadosAdicionais.paciente_id ||
+        ""
+      );
+
+      let description =
+        raw.descricao_detalhada ||
+        raw.descricao ||
+        raw.motivo_revisao || // Laudo specific fallback
+        dadosAdicionais.descricao || // Admin fallback if details missing
+        dadosAdicionais.descricao_detalhada || // Nursing fallback
+        "";
+
+      // Specific fallback for 'enfermagem' if no description found yet
+      if (raw.tipo === 'assistencial' && !description) { // 'assistencial' is the type for 'enfermagem' occurrences
+        description = raw.subtipo || "";
       }
 
-      // Handle Description Mapping
-      if (occurrence.tipo === 'revisao_exame') {
-        let desc = `Motivo: ${occurrence.motivo_revisao || "Não informado"}`;
-        if (occurrence.motivo_revisao === 'Outro' && occurrence.motivo_revisao_outro) {
-          desc += ` - ${occurrence.motivo_revisao_outro}`;
+      setDescricaoDetalhada(description);
+
+      // Admin Title Support (used as Description fallback if very minimal)
+      if (raw.tipo === 'administrativa' && !raw.descricao_detalhada && !raw.descricao) {
+        setDescricaoDetalhada(raw.titulo || "Ocorrência Administrativa");
+      }
+
+      setImpactoPercebido(raw.impacto_percebido || dadosAdicionais.impacto_percebido || "");
+      setMedicoDestino(raw.medico_destino || raw.medico_responsavel_laudo || ""); // Show doctor for laudo
+
+      const dob = raw.paciente_data_nascimento;
+      if (dob) {
+        // Handle both YYYY-MM-DD and potentially other formats if necessary
+        try {
+          const [year, month, day] = dob.split("-");
+          if (year && month && day) {
+            setPacienteDataNascimento(`${day}/${month}/${year}`);
+          } else {
+            setPacienteDataNascimento(dob);
+          }
+        } catch (e) {
+          setPacienteDataNascimento(dob);
         }
-        if (occurrence.tipo_discrepancia) {
-          desc += `\nTipo de Discrepância: ${occurrence.tipo_discrepancia}`;
-        }
-        if (occurrence.acao_tomada) {
-          desc += `\nAção Tomada: ${occurrence.acao_tomada}`;
-        }
-        setDescricaoDetalhada(desc);
       } else {
-        setDescricaoDetalhada(occurrence.descricao_detalhada || "");
+        setPacienteDataNascimento("");
       }
 
       if (occurrence.desfecho_tipos) {

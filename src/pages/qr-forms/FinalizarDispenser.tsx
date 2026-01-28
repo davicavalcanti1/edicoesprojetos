@@ -95,21 +95,24 @@ export default function FinalizarDispenser() {
         setIsSubmitting(true);
         try {
             // 1. Atualizar Supabase (chamados_dispenser)
+            const updatePayload: any = {
+                status: "resolvido",
+                atualizado_em: new Date().toISOString()
+            };
+
+            // Add finalization fields (columns added by migration)
+            updatePayload.resolvido_em = new Date().toISOString();
+            updatePayload.finalizado_por = values.funcionario;
+
+            // Append to existing observation
+            const conclusao = `Finalizado por: ${values.funcionario}. ${values.observacoes || ""}`;
+            updatePayload.observacao = occurrence.observacao
+                ? `${occurrence.observacao}\n\n--- CONCLUSÃO ---\n${conclusao}`
+                : conclusao;
+
             const { error: dbError } = await supabase
                 .from("chamados_dispenser" as any)
-                .update({
-                    status: "resolvido",
-                    resolvido_em: new Date().toISOString(), // Column exists
-                    finalizado_por: values.funcionario, // Column added by migration
-                    observacao: (occurrence.observacao ? occurrence.observacao + " | Conclusão: " : "") + values.observacoes
-                    // If we overwrite, we lose original observation if any.
-                    // But original is "observacao" (singular).
-                    // Actually, let's append if there was one, or assuming this is the resolution note.
-                    // To be safe, maybe we should keep original observation?
-                    // The form schema says "observacoes".
-                    // Let's just create a combined string if needed or just use the field.
-                    // Given the prompt "Atualizar: finalizado_em, finalizado_por, observacoes", I'll set it.
-                } as any)
+                .update(updatePayload)
                 .eq("id", occurrence.id);
 
             if (dbError) throw dbError;

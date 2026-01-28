@@ -403,7 +403,11 @@ export function useCreateOccurrence() {
           pessoas_comunicadas: data.dadosEspecificos?.pessoasComunicadas,
 
           // Legacy/Flex Field
-          dados_adicionais: data.dadosEspecificos || {}
+          dados_adicionais: {
+            sexo: paciente.sexo,
+            unidade: paciente.unidadeLocal,
+            ...(data.dadosEspecificos || {})
+          }
         };
 
         const { data: res, error } = await (supabase
@@ -512,20 +516,28 @@ export function useCreateNursingOccurrence() {
       const payload = {
         tenant_id: profile.tenant_id,
         criado_por: profile.id,
-        tipo_incidente: data.subtipo || "Geral",
-        descricao_detalhada: data.descricao_detalhada || data.descricao || (data.dados_especificos ? JSON.stringify(data.dados_especificos) : ""),
+        subtipo: data.subtipo || "Geral", // Mapped to 'subtipo' column in schema usually, but schema has 'subtipo'
+        // 'tipo_incidente' is NOT in the schema provided in 20260128000003_enf_addon.sql, it has 'subtipo'.
+        // Wait, checking schema: "subtipo TEXT NOT NULL". OK.
+
+        // descricao_detalhada NOT in schema.
 
         // Patient Data
         paciente_nome: pacienteName,
         paciente_cpf: data.paciente?.cpf || data.paciente_cpf,
         paciente_unidade_local: data.paciente_unidade_local || data.paciente?.unidadeLocal || data.unidadeLocal,
         paciente_telefone: data.paciente_telefone || data.paciente?.telefone,
-        // Convert DD/MM/YYYY if needed (helper not in scope here but simple split works if standard string)
-        paciente_data_nascimento: data.paciente_data_nascimento || (data.paciente?.dataNascimento ? new Date(data.paciente.dataNascimento.split('/').reverse().join('-')).toISOString().split('T')[0] : null),
+        paciente_tipo_exame: data.paciente?.tipoExame || data.paciente_tipo_exame, // Ensure this exists in schema
+        // Schema check: paciente_tipo_exame TEXT. OK.
 
         paciente_data_hora_evento: incidentDate,
         conduta: data.conduta || data.dados_especificos?.conduta || data.dadosEspecificos?.conduta,
-        status: "registrada"
+        status: "registrada",
+
+        dados_adicionais: {
+          descricao_detalhada: data.descricao_detalhada || data.descricao || (data.dados_especificos ? JSON.stringify(data.dados_especificos) : ""),
+          ...(data.dados_especificos || data.dadosEspecificos || {})
+        }
       };
 
       const { data: res, error } = await (supabase

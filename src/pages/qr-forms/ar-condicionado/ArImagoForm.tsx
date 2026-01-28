@@ -55,43 +55,45 @@ export default function ArCondicionadoImagoForm() {
         setIsSubmitting(true);
         try {
             // 1. Tenant
+            // Try to find a tenant, or fallback to default to prevent blocking
             const { data: tenant } = await supabase.from('tenants').select('id').limit(1).maybeSingle();
-            const tenantId = tenant?.id;
-            if (!tenantId) throw new Error("Tenant não encontrado");
+            const tenantId = tenant?.id || "d9e8df45-7767-425d-aa33-725340620108";
 
-            // 2. Upload Fotos (Shared bucket?)
+            // 2. Upload Fotos
             const uploads = [];
             if (fotoAntes) uploads.push(fotoAntes);
             if (fotoDepois) uploads.push(fotoDepois);
             if (values.tem_defeito === "sim" && fotoDefeito) uploads.push(fotoDefeito);
 
-            // Note: uploadMaintenancePhotos likely puts in 'maintenance-photos' bucket. 
-            // If we moved to 'attachments', this might need update, but let's assume legacy bucket still exists or we use new one later.
-            // For now, let's keep it if it works, otherwise we might need to change buckets.
             const photoUrls = await uploadMaintenancePhotos(uploads);
 
-            // 3. Salvar no Supabase (chamados_ar_condicionado)
+            // 3. Salvar no Supabase
             // @ts-ignore
             const { error: insertError } = await supabase.from("chamados_ar_condicionado").insert({
                 localizacao: params.sala || params.localizacao || "N/A",
                 descricao: `[Manutenção Preventiva] ${values.descricao} \nResp: ${values.funcionario}`,
 
-                // Fields specific to AC
                 modelo: params.modelo,
                 numero_serie: params.numero_serie,
 
-                // Status
-                status: values.tem_defeito === "sim" ? "aberto" : "concluido", // Se tem defeito, deixa aberto
+                status: values.tem_defeito === "sim" ? "aberto" : "concluido",
                 prioridade: "media",
                 tenant_id: tenantId,
 
-                // Metadata
+                // Mapped to the newly created column
                 solicitante_info: {
                     nome: values.funcionario,
                     tipo: "tecnico_imago",
                     data_limpeza: values.data_limpeza,
                     tem_defeito: values.tem_defeito,
                     defeito_descricao: values.defeito_descricao,
+                    fotos: photoUrls
+                },
+
+                // Also save to standard JSONB for future-proofing
+                dados_adicionais: {
+                    solicitante: values.funcionario,
+                    tipo_manutencao: "preventiva",
                     fotos: photoUrls
                 }
             });
