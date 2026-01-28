@@ -55,7 +55,7 @@ export async function generateAndStorePdf(dbOcc: DbOccurrence): Promise<string |
 
     // Use the original table from the occurrence object, defaulting to 'ocorrencias_adm' if missing
     // (Though practically it should be there if coming from the hook)
-    const targetTable = (dbOcc as any).original_table || 'ocorrencias_adm';
+    const targetTable = (dbOcc as any).original_table || 'ocorrencia_adm';
 
     if (!publicToken) {
       // Generate a new token if one doesn't exist

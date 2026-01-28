@@ -65,7 +65,7 @@ export default function PublicRevisaoLaudo() {
 
       try {
         const { data, error } = await (supabase
-          .from("ocorrencias_adm")
+          .from("ocorrencia_adm")
           .select(
             "id, protocolo, paciente_nome_completo, paciente_id, paciente_tipo_exame, paciente_unidade_local, paciente_data_hora_evento, paciente_sexo, paciente_telefone, descricao_detalhada, mensagem_admin_medico, mensagem_medico, status, medico_destino, encaminhada_em, finalizada_em"
           )
@@ -86,7 +86,7 @@ export default function PublicRevisaoLaudo() {
             .from("attachments")
             .select("*")
             .eq("origin_id", data.id)
-            .eq("origin_table", "ocorrencias_adm")
+            .eq("origin_table", "ocorrencia_adm")
             .order("uploaded_at", { ascending: true }); // Note: updated_at/uploaded_at column check
 
           if (attachmentsData && attachmentsData.length > 0) {
@@ -133,7 +133,7 @@ export default function PublicRevisaoLaudo() {
     try {
       // 1. Update Supabase (Message only)
       const { error } = await supabase
-        .from("ocorrencias_adm")
+        .from("ocorrencia_adm")
         .update({ mensagem_medico: mensagemMedico })
         .eq("public_token", token);
 
@@ -206,7 +206,7 @@ export default function PublicRevisaoLaudo() {
 
       // 1. Update Supabase (Message + Status)
       const { error } = await supabase
-        .from("ocorrencias_adm")
+        .from("ocorrencia_adm")
         .update({
           mensagem_medico: mensagemMedico,
           status: "aguardando_triagem",
@@ -284,7 +284,7 @@ export default function PublicRevisaoLaudo() {
 
       // 1. Update Supabase (Message + Status)
       const { error } = await supabase
-        .from("ocorrencias_adm")
+        .from("ocorrencia_adm")
         .update({
           mensagem_medico: automaticMessage,
           status: "aguardando_triagem",

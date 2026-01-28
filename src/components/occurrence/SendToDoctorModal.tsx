@@ -108,7 +108,7 @@ export function SendToDoctorModal({
 
       // Update occurrence with token and doctor info
       const { error: updateError } = await supabase
-        .from("ocorrencias_adm" as any)
+        .from("ocorrencia_adm" as any)
         .update({
           public_token: publicToken,
           medico_destino: medicoSelecionado?.nome,
@@ -125,7 +125,7 @@ export function SendToDoctorModal({
         .from("attachments" as any)
         .select("*")
         .eq("origin_id", occurrenceId)
-        .eq("origin_table", "ocorrencias_adm");
+        .eq("origin_table", "ocorrencia_adm");
 
       let attachmentsForWebhook: any[] = [];
       if (attachmentsData && attachmentsData.length > 0) {

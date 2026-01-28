@@ -225,6 +225,7 @@ export default function NovaOcorrenciaForm() {
           subtipo: data.subtipo,
           paciente_nome_completo: data.paciente.nomeCompleto,
           paciente_telefone: data.paciente.telefone,
+          paciente_cpf: data.paciente.cpf,
           paciente_id: data.paciente.idPaciente,
           paciente_data_nascimento: data.paciente.dataNascimento, // Let hook handle conversion
           paciente_tipo_exame: data.paciente.tipoExame, // Not stored but passed
@@ -271,6 +272,7 @@ export default function NovaOcorrenciaForm() {
           paciente_unidade_local: data.unidadeLocal,
           paciente_data_hora_evento: data.dataHoraEvento,
           paciente_sexo: data.paciente.sexo,
+          paciente_cpf: data.paciente.cpf,
           descricao_detalhada: JSON.stringify(data.dadosEspecificos || {}),
           dados_especificos: data.dadosEspecificos,
           medico_destino: (data.dadosEspecificos as any)?.medicoResponsavel || (data.dadosEspecificos as any)?.medicoAvaliou,
@@ -281,9 +283,9 @@ export default function NovaOcorrenciaForm() {
 
       // Determine origin table for attachments
       let originTable = 'occurrences';
-      if (data.tipo === 'enfermagem') originTable = 'ocorrencias_enf';
-      else if (data.tipo === 'revisao_exame') originTable = 'ocorrencias_laudo';
-      else if (data.tipo === 'administrativa') originTable = 'ocorrencias_adm';
+      if (data.tipo === 'enfermagem') originTable = 'ocorrencia_enf';
+      else if (data.tipo === 'revisao_exame') originTable = 'ocorrencia_laudo';
+      else if (data.tipo === 'administrativa') originTable = 'ocorrencia_adm';
       else if (data.tipo === 'paciente') originTable = 'ocorrencia_paciente';
       else if (data.tipo === 'livre') originTable = 'ocorrencia_livre';
 

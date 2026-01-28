@@ -118,15 +118,16 @@ export default function AdminOccurrenceForm() {
                 .from('ocorrencia_adm' as any)
                 .insert({
                     tenant_id: (await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()).data?.tenant_id,
-                    employee_name: values.employeeName,
-                    occurrence_date: format(values.date, 'yyyy-MM-dd'),
-                    type: selectedType.label,
-                    subtype: selectedSubtype.label,
-                    descricao: values.description, // Mapped to 'descricao'
-                    criado_por: user.id, // Mapped to 'criado_por'
-                    attachments: attachments,
-                    titulo: `${selectedType.label} - ${values.employeeName}`, // Necessary for base schema
-                    categoria: selectedType.label
+                    tipo: selectedType.label,
+                    subtipo: selectedSubtype.label,
+                    descricao_detalhada: values.description,
+                    criado_por: user.id,
+                    titulo: `${selectedType.label} - ${values.employeeName}`,
+                    dados_adicionais: {
+                        employee_name: values.employeeName,
+                        occurrence_date: format(values.date, 'yyyy-MM-dd'),
+                        attachments_info: attachments
+                    }
                 } as any)
                 .select()
                 .single();

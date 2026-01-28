@@ -25,6 +25,8 @@ export interface UnifiedOccurrence {
   raw_data: any;
 }
 
+export type DbOccurrence = any;
+
 // =========================================================
 // UNIFIED HOOK (Merges separate tables)
 // =========================================================
@@ -319,7 +321,10 @@ export function useCreateOccurrence() {
         telefone: data.paciente_telefone,
         idPaciente: data.paciente_id,
         tipoExame: data.paciente_tipo_exame,
-        dataHoraEvento: data.paciente_data_hora_evento
+        dataHoraEvento: data.paciente_data_hora_evento,
+        cpf: data.paciente_cpf,
+        sexo: data.paciente_sexo,
+        unidadeLocal: data.paciente_unidade_local
       };
 
       // Administrative
@@ -327,21 +332,26 @@ export function useCreateOccurrence() {
         const payload = {
           tenant_id: profile.tenant_id,
           criado_por: profile.id,
-          titulo: `Ocorrência Administrativa - ${data.subtipo}`, // Keeps generic title
-          descricao: data.descricao_detalhada || JSON.stringify(data.dados_especificos || {}),
-          categoria: data.subtipo || "Geral",
+          titulo: `Ocorrência Administrativa - ${data.subtipo}`,
+          descricao_detalhada: data.descricao_detalhada || JSON.stringify(data.dados_especificos || {}),
+          subtipo: data.subtipo || "Geral",
           prioridade: "media",
           status: "pendente",
 
           // Patient Data (Now supported in ocorrencia_adm)
-          paciente_nome_completo: paciente.nomeCompleto,
-          paciente_unidade_local: data.unidadeLocal || paciente.unidadeLocal,
-          paciente_id: paciente.idPaciente,
-          paciente_tipo_exame: paciente.tipoExame,
+          paciente_nome: paciente.nomeCompleto,
+          // paciente_unidade_local REMOVED from root, not in table
+          paciente_cpf: paciente.cpf, // Added CPF support to Adm table logic if passed
+          // paciente_id REMOVED/MAPPED - ocorrencia_adm doesn't link to patient ID usually, but has strings
+          // paciente_tipo_exame REMOVED from root
           paciente_telefone: paciente.telefone,
           paciente_data_nascimento: convertToDbDate(paciente.dataNascimento),
 
-          dados_especificos: data.dados_especificos || data.dadosEspecificos
+          dados_adicionais: {
+            unidade: data.unidadeLocal || paciente.unidadeLocal,
+            tipoExame: paciente.tipoExame,
+            ...(data.dados_especificos || data.dadosEspecificos)
+          }
         };
 
         const { data: res, error } = await (supabase
@@ -367,7 +377,7 @@ export function useCreateOccurrence() {
           // Patient Snapshot (Mapeamento explícito)
           paciente_nome: paciente.nomeCompleto,
           paciente_id: paciente.idPaciente,
-          paciente_sexo: paciente.sexo,
+          // paciente_sexo: paciente.sexo, // REMOVED - Not in schema
           paciente_cpf: paciente.cpf,
           paciente_data_nascimento: convertToDbDate(paciente.dataNascimento),
           paciente_telefone: paciente.telefone,
@@ -375,8 +385,8 @@ export function useCreateOccurrence() {
           // Exam Data
           exame_tipo: paciente.tipoExame || "Não informado",
           exame_regiao: data.dadosEspecificos?.exameRegiao,
-          exame_data: data.dadosEspecificos?.exameData ? convertToDbDate(data.dadosEspecificos.exameData) : null,
-          exame_unidade: data.unidadeLocal || data.paciente?.unidadeLocal,
+          exame_data: data.dadosEspecificos?.exameData ? convertToDbDate(data.dadosEspecificos.exameData) : (paciente.dataHoraEvento ? convertToDbDate(paciente.dataHoraEvento) : null),
+          exame_unidade: data.unidadeLocal || data.paciente?.unidadeLocal || paciente.unidadeLocal,
 
           // Doctor & Report
           medico_responsavel_laudo: data.dadosEspecificos?.medicoResponsavelId, // Assuming select returns name or we store ID
@@ -507,14 +517,14 @@ export function useCreateNursingOccurrence() {
 
         // Patient Data
         paciente_nome: pacienteName,
-        paciente_prontuario: pacienteId,
+        paciente_cpf: data.paciente?.cpf || data.paciente_cpf,
         paciente_unidade_local: data.paciente_unidade_local || data.paciente?.unidadeLocal || data.unidadeLocal,
         paciente_telefone: data.paciente_telefone || data.paciente?.telefone,
         // Convert DD/MM/YYYY if needed (helper not in scope here but simple split works if standard string)
         paciente_data_nascimento: data.paciente_data_nascimento || (data.paciente?.dataNascimento ? new Date(data.paciente.dataNascimento.split('/').reverse().join('-')).toISOString().split('T')[0] : null),
 
-        data_incidente: incidentDate,
-        conduta_tomada: data.conduta || data.dados_especificos?.conduta || data.dadosEspecificos?.conduta,
+        paciente_data_hora_evento: incidentDate,
+        conduta: data.conduta || data.dados_especificos?.conduta || data.dadosEspecificos?.conduta,
         status: "registrada"
       };
 

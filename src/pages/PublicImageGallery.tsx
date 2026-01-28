@@ -44,7 +44,7 @@ export default function PublicImageGallery() {
             try {
                 // Fetch occurrence by token - NO SUBTYPE FILTER, allowing any authorized PDF viewer to see images
                 const { data, error } = await (supabase
-                    .from("ocorrencias_adm")
+                    .from("ocorrencia_adm")
                     .select(
                         "id, protocolo, paciente_nome_completo, paciente_data_hora_evento, status, public_token"
                     )
@@ -64,7 +64,7 @@ export default function PublicImageGallery() {
                         .from("attachments")
                         .select("*")
                         .eq("origin_id", data.id)
-                        .eq("origin_table", "ocorrencias_adm")
+                        .eq("origin_table", "ocorrencia_adm")
                         .order("uploaded_at", { ascending: true });
 
                     if (attachmentsData && attachmentsData.length > 0) {

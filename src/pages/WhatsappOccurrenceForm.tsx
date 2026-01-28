@@ -105,7 +105,7 @@ export default function WhatsappOccurrenceForm() {
 
             // @ts-ignore
             const { data: inserted, error } = await supabase
-                .from("ocorrencias_adm")
+                .from("ocorrencia_adm")
                 .insert({
                     ...occurrenceData,
                     titulo: `WPP - ${data.paciente_nome}`,
