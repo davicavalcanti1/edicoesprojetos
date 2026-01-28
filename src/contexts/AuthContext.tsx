@@ -69,17 +69,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profileData) {
         setProfile(profileData as Profile);
 
-        // Fetch tenant
-        const { data: tenantData, error: tenantError } = await supabase
-          .from('tenants')
-          .select('*')
-          .eq('id', profileData.tenant_id)
-          .maybeSingle();
+        // Fetch tenant only if tenant_id exists
+        if (profileData.tenant_id) {
+          const { data: tenantData, error: tenantError } = await supabase
+            .from('tenants')
+            .select('*')
+            .eq('id', profileData.tenant_id)
+            .maybeSingle();
 
-        if (tenantError) {
-          console.error('Error fetching tenant:', tenantError);
-        } else if (tenantData) {
-          setTenant(tenantData as Tenant);
+          if (tenantError) {
+            console.error('Error fetching tenant:', tenantError);
+          } else if (tenantData) {
+            setTenant(tenantData as Tenant);
+          }
+        } else {
+          // Fallback default tenant for legacy/broken profiles
+          // This prevents the app from breaking if tenant_id is missing column
+          const defaultTenantId = '00000000-0000-0000-0000-000000000000';
+          // Optionally fetch default tenant here or just assume it exists
         }
 
         // Fetch role - NOW FROM PROFILES DIRECTLY

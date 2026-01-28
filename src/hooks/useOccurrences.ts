@@ -32,17 +32,18 @@ export interface UnifiedOccurrence {
 // =========================================================
 export function useOccurrences() {
   const { profile } = useAuth();
+  const tenantId = profile?.tenant_id || '00000000-0000-0000-0000-000000000000';
 
   return useQuery({
-    queryKey: ["occurrences-unified", profile?.tenant_id],
+    queryKey: ["occurrences-unified", tenantId],
     queryFn: async () => {
       // Fetch all tables in parallel
       const [admRes, enfRes, laudoRes, pacRes, livreRes] = await Promise.all([
-        supabase.from("ocorrencias_adm" as any).select("*").order("criado_em", { ascending: false }),
-        supabase.from("ocorrencias_enf" as any).select("*").order("criado_em", { ascending: false }),
-        supabase.from("ocorrencias_laudo" as any).select("*").order("criado_em", { ascending: false }),
-        supabase.from("ocorrencia_paciente" as any).select("*").order("criado_em", { ascending: false }),
-        supabase.from("ocorrencia_livre" as any).select("*").order("criado_em", { ascending: false }),
+        supabase.from("ocorrencias_adm" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
+        supabase.from("ocorrencias_enf" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
+        supabase.from("ocorrencias_laudo" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
+        supabase.from("ocorrencia_paciente" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
+        supabase.from("ocorrencia_livre" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
       ]);
 
       if (admRes.error) throw admRes.error;

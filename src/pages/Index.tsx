@@ -66,7 +66,7 @@ export default function Index() {
             )}
 
             {/* Ocorrências da enfermagem */}
-            {(role === 'admin' || role === 'user' || role === 'enfermagem') && (
+            {(role === 'admin' || role === 'enfermagem') && (
               <Button
                 onClick={() => navigate("/ocorrencias/nova/enfermagem")}
                 size="lg"

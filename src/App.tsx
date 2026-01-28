@@ -163,7 +163,7 @@ const App = () => (
 
             {/* Ocorrências Enfermagem */}
             <Route path="/ocorrencias/nova/enfermagem" element={
-              <ProtectedRoute allowedRoles={['admin', 'user', 'rh', 'enfermagem']}>
+              <ProtectedRoute allowedRoles={['admin', 'rh', 'enfermagem']}>
                 <NursingSubtypeSelection />
               </ProtectedRoute>
             } />
