@@ -136,7 +136,7 @@ export function useOccurrences() {
       const combined = [...administrative, ...nursing, ...laudo, ...paciente, ...livre];
       return combined.sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime()) as UnifiedOccurrence[];
     },
-    enabled: !!profile?.tenant_id,
+    enabled: !!tenantId,
   });
 }
 
