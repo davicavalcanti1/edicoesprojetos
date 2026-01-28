@@ -362,7 +362,7 @@ export function useCreateOccurrence() {
           // Core Identity
           tipo: 'revisao_exame',
           subtipo: 'revisao_exame',
-          status: 'registrada', // Initial status
+          status: 'aguardando_envio', // Initial status
 
           // Patient Snapshot (Mapeamento explícito)
           paciente_nome: paciente.nomeCompleto,
