@@ -74,10 +74,10 @@ export default function Ocorrencias() {
       let normalizedType = item.tipo;
       let sourceOrigin = 'assistencial'; // Default
 
-      if (item.original_table === 'ocorrencias_adm') {
+      if (item.original_table === 'ocorrencia_adm') {
         sourceOrigin = 'admin';
         normalizedType = 'administrativa';
-      } else if (item.original_table === 'ocorrencias_enf') {
+      } else if (item.original_table === 'ocorrencia_enf') {
         sourceOrigin = 'nursing';
         normalizedType = 'enfermagem';
       } else if (item.original_table === 'ocorrencia_laudo') {
@@ -160,9 +160,9 @@ export default function Ocorrencias() {
 
   // Handlers
   const handleNavigate = (item: any) => {
-    if (item.original_table === 'ocorrencias_enf') {
+    if (item.original_table === 'ocorrencia_enf') {
       navigate(`/ocorrencias/enfermagem/${item.id}`);
-    } else if (item.original_table === 'ocorrencias_adm') {
+    } else if (item.original_table === 'ocorrencia_adm') {
       navigate(`/ocorrencias/admin/${item.id}`);
     } else {
       // assistencial, occurrences (livre, paciente), laudo
@@ -171,7 +171,7 @@ export default function Ocorrencias() {
   };
 
   const handleDownloadPdf = (item: any) => {
-    if (item.original_table === 'ocorrencias_adm') {
+    if (item.original_table === 'ocorrencia_adm') {
       // Map back to format expected by PDF generator if needed
       downloadAdminOccurrencePDF(item.raw_data);
     } else {

@@ -32,10 +32,10 @@ export function useAttachmentsWithSignedUrls(originId: string | undefined, origi
         case 'ocorrencia_laudo':
           query = query.eq('ocorrencia_laudo_id', originId);
           break;
-        case 'ocorrencias_adm':
+        case 'ocorrencia_adm':
           query = query.eq('ocorrencia_adm_id', originId);
           break;
-        case 'ocorrencias_enf':
+        case 'ocorrencia_enf':
           query = query.eq('ocorrencia_enf_id', originId);
           break;
         case 'chamados_dispenser':
@@ -137,10 +137,10 @@ export function useUploadAttachments() {
           case 'ocorrencia_laudo':
             payload.ocorrencia_laudo_id = originId;
             break;
-          case 'ocorrencias_adm':
+          case 'ocorrencia_adm':
             payload.ocorrencia_adm_id = originId;
             break;
-          case 'ocorrencias_enf':
+          case 'ocorrencia_enf':
             payload.ocorrencia_enf_id = originId;
             break;
           case 'chamados_dispenser':

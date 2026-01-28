@@ -39,8 +39,8 @@ export function useOccurrences() {
     queryFn: async () => {
       // Fetch all tables in parallel
       const [admRes, enfRes, laudoRes, pacRes, livreRes] = await Promise.all([
-        supabase.from("ocorrencias_adm" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
-        supabase.from("ocorrencias_enf" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
+        supabase.from("ocorrencia_adm" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
+        supabase.from("ocorrencia_enf" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
         supabase.from("ocorrencia_laudo" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
         supabase.from("ocorrencia_paciente" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
         supabase.from("ocorrencia_livre" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
@@ -64,7 +64,7 @@ export function useOccurrences() {
         criado_por: item.criado_por || item.user_id,
         paciente_nome: item.paciente_nome_completo, // Direct map
         paciente_id: item.paciente_id,
-        original_table: 'ocorrencias_adm',
+        original_table: 'ocorrencia_adm',
         raw_data: item
       }));
 
@@ -80,7 +80,7 @@ export function useOccurrences() {
         criado_por: item.criado_por,
         paciente_nome: item.paciente_nome,
         paciente_id: item.paciente_prontuario,
-        original_table: 'ocorrencias_enf',
+        original_table: 'ocorrencia_enf',
         raw_data: item
       }));
 
@@ -155,7 +155,7 @@ export function useOccurrence(id: string | undefined) {
       // This is inefficient but necessary given the separation without a unified ID index
       // Alternatively, we could query based on the 'type' if passed, but useOccurrence usually just has ID.
 
-      const tables = ['ocorrencias_adm', 'ocorrencias_enf', 'ocorrencia_laudo', 'ocorrencia_paciente', 'ocorrencia_livre'];
+      const tables = ['ocorrencia_adm', 'ocorrencia_enf', 'ocorrencia_laudo', 'ocorrencia_paciente', 'ocorrencia_livre'];
 
       for (const table of tables) {
         const { data, error } = await supabase
@@ -186,7 +186,7 @@ export function useAdministrativeOccurrences() {
     queryKey: ["admin-occurrences-new", profile?.tenant_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("ocorrencias_adm" as any)
+        .from("ocorrencia_adm" as any)
         .select("*")
         .order("criado_em", { ascending: false });
       if (error) throw error;
@@ -202,7 +202,7 @@ export function useNursingOccurrences() {
     queryKey: ["nursing-occurrences-new", profile?.tenant_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("ocorrencias_enf" as any)
+        .from("ocorrencia_enf" as any)
         .select("*")
         .order("criado_em", { ascending: false });
       if (error) throw error;
@@ -333,7 +333,7 @@ export function useCreateOccurrence() {
           prioridade: "media",
           status: "pendente",
 
-          // Patient Data (Now supported in ocorrencias_adm)
+          // Patient Data (Now supported in ocorrencia_adm)
           paciente_nome_completo: paciente.nomeCompleto,
           paciente_unidade_local: data.unidadeLocal || paciente.unidadeLocal,
           paciente_id: paciente.idPaciente,
@@ -345,7 +345,7 @@ export function useCreateOccurrence() {
         };
 
         const { data: res, error } = await (supabase
-          .from("ocorrencias_adm" as any) as any)
+          .from("ocorrencia_adm" as any) as any)
           .insert(payload)
           .select()
           .single();
@@ -422,7 +422,7 @@ export function useCreateOccurrence() {
       };
 
       const { data: res, error } = await (supabase
-        .from("ocorrencias_adm" as any) as any)
+        .from("ocorrencia_adm" as any) as any)
         .insert(payload)
         .select()
         .single();
@@ -466,7 +466,7 @@ export function useCreateAdminOccurrence() {
 
       // Explicit cast to any to bypass TS check if type definitions aren't fully up to date yet
       const { data: res, error } = await (supabase
-        .from("ocorrencias_adm" as any) as any)
+        .from("ocorrencia_adm" as any) as any)
         .insert(payload)
         .select()
         .single();
@@ -519,7 +519,7 @@ export function useCreateNursingOccurrence() {
       };
 
       const { data: res, error } = await (supabase
-        .from("ocorrencias_enf" as any) as any)
+        .from("ocorrencia_enf" as any) as any)
         .insert(payload)
         .select()
         .single();
