@@ -1,10 +1,16 @@
+import { useState } from "react";
 import { UseFormReturn } from "react-hook-form";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Check, ChevronsUpDown } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { FormLabel } from "@/components/ui/form";
 import { OccurrenceFormData } from "@/types/occurrence";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { useDoctors } from "@/hooks/useResources";
 
 interface ReacoesAdversasFormProps {
     form: UseFormReturn<OccurrenceFormData>;
@@ -12,6 +18,8 @@ interface ReacoesAdversasFormProps {
 
 export function ReacoesAdversasForm({ form }: ReacoesAdversasFormProps) {
     const dados = (form.watch("dadosEspecificos") as any) || {};
+    const { data: doctors = [] } = useDoctors();
+    const [openMedico, setOpenMedico] = useState(false);
 
     const updateDados = (field: string, value: any) => {
         form.setValue("dadosEspecificos", {
@@ -78,12 +86,47 @@ export function ReacoesAdversasForm({ form }: ReacoesAdversasFormProps) {
 
                 <div className="space-y-2">
                     <FormLabel>Médico que avaliou</FormLabel>
-                    <Input
-                        placeholder="Nome do médico"
-                        value={dados.medicoAvaliou || ""}
-                        onChange={(e) => updateDados("medicoAvaliou", e.target.value)}
-                        className="bg-background"
-                    />
+                    <Popover open={openMedico} onOpenChange={setOpenMedico}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={openMedico}
+                                className="w-full justify-between bg-background"
+                            >
+                                {dados.medicoAvaliou || "Selecione o médico..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0 z-50">
+                            <Command>
+                                <CommandInput placeholder="Buscar médico..." />
+                                <CommandList>
+                                    <CommandEmpty>Nenhum médico encontrado.</CommandEmpty>
+                                    <CommandGroup>
+                                        {doctors.map((doctor) => (
+                                            <CommandItem
+                                                key={doctor.id}
+                                                value={doctor.nome}
+                                                onSelect={() => {
+                                                    updateDados("medicoAvaliou", doctor.nome);
+                                                    setOpenMedico(false);
+                                                }}
+                                            >
+                                                <Check
+                                                    className={cn(
+                                                        "mr-2 h-4 w-4",
+                                                        dados.medicoAvaliou === doctor.nome ? "opacity-100" : "opacity-0"
+                                                    )}
+                                                />
+                                                {doctor.nome}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
                 </div>
 
                 <div className="space-y-2">

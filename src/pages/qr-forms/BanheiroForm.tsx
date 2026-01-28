@@ -54,14 +54,19 @@ export default function BanheiroForm() {
             if (!tenantId) throw new Error("Tenant não encontrado");
 
             // 2. Salvar no Supabase (chamados_banheiro)
-            // @ts-ignore
-            const { data: novoChamado, error } = await supabase.from("chamados_banheiro").insert({
+            const payload = {
                 localizacao: params.localizacao,
                 problema: values.problema,
-                observacao: values.descricao, // Maps to descricao in form
+                observacao: values.descricao, // Column 'observacao'
                 tenant_id: tenantId,
                 status: "aberto"
-            }).select().single();
+            };
+
+            const { data: novoChamado, error } = await supabase
+                .from("chamados_banheiro")
+                .insert(payload)
+                .select()
+                .single();
 
             if (error) throw error;
 
@@ -81,6 +86,7 @@ ${linkFinalizar}`;
 
             const n8nPayload = {
                 event_type: "abrir",
+                id: (novoChamado as any).id,
                 protocol: protocolNum,
                 banheiro_localizacao: params.localizacao,
                 banheiro_problema: values.problema,

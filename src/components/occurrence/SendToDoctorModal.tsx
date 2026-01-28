@@ -28,8 +28,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Lista de médicos
-import { MEDICOS } from "@/constants/doctors";
+// Lista de médicos via hook
+import { useDoctors } from "@/hooks/useResources";
 import { generateSecureToken } from "@/lib/utils/token";
 
 interface SendToDoctorModalProps {
@@ -65,12 +65,14 @@ export function SendToDoctorModal({
   const [isSending, setIsSending] = useState(false);
   const [medicoPopoverOpen, setMedicoPopoverOpen] = useState(false);
 
+  const { data: doctors = [] } = useDoctors();
+
   // Set initial values when modal opens
   useEffect(() => {
     if (open) {
       if (initialMensagem) setMensagem(initialMensagem);
       if (initialMedicoNome) {
-        const medico = MEDICOS.find(m => m.nome === initialMedicoNome);
+        const medico = doctors.find(m => m.nome === initialMedicoNome);
         if (medico) setMedicoId(medico.id);
       }
     } else {
@@ -80,9 +82,9 @@ export function SendToDoctorModal({
       if (!initialMedicoNome) setMedicoId("");
       if (!initialMensagem) setMensagem("");
     }
-  }, [open, initialMedicoNome, initialMensagem]);
+  }, [open, initialMedicoNome, initialMensagem, doctors]);
 
-  const medicoSelecionado = MEDICOS.find((m) => m.id === medicoId);
+  const medicoSelecionado = doctors.find((m) => m.id === medicoId);
 
   const handleSend = async () => {
     if (!medicoId || !mensagem.trim()) {
@@ -106,13 +108,13 @@ export function SendToDoctorModal({
 
       // Update occurrence with token and doctor info
       const { error: updateError } = await supabase
-        .from("ocorrencias_adm")
+        .from("ocorrencias_adm" as any)
         .update({
           public_token: publicToken,
           medico_destino: medicoSelecionado?.nome,
           mensagem_admin_medico: mensagem,
           encaminhada_em: new Date().toISOString(),
-          status: "aguardando_medico",
+          status: "aguardando_medico" as any,
         })
         .eq("id", occurrenceId);
 
@@ -120,7 +122,7 @@ export function SendToDoctorModal({
 
       // Fetch attachments with signed URLs to send in webhook
       const { data: attachmentsData } = await supabase
-        .from("attachments")
+        .from("attachments" as any)
         .select("*")
         .eq("origin_id", occurrenceId)
         .eq("origin_table", "ocorrencias_adm");
@@ -239,7 +241,7 @@ export function SendToDoctorModal({
                   <CommandList>
                     <CommandEmpty>Nenhum médico encontrado.</CommandEmpty>
                     <CommandGroup>
-                      {MEDICOS.map((medico) => (
+                      {doctors.map((medico) => (
                         <CommandItem
                           key={medico.id}
                           value={medico.nome}

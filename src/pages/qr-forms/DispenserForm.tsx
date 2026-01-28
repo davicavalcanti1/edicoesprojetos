@@ -55,15 +55,21 @@ export default function DispenserForm() {
             if (!tenantId) throw new Error("Tenant não encontrado");
 
             // 2. Salvar no Supabase (chamados_dispenser)
-            // @ts-ignore
-            const { data: novoChamado, error } = await supabase.from("chamados_dispenser").insert({
+            const payload = {
                 localizacao: params.localizacao,
+                marca: params.marca || null,
                 tipo_insumo: "Alcool",
                 problema: values.situacao,
-                observacao: values.descricao, // Added column via migration
+                observacao: values.descricao, // Column 'observacao'
                 tenant_id: tenantId,
                 status: "aberto"
-            }).select().single();
+            };
+
+            const { data: novoChamado, error } = await supabase
+                .from("chamados_dispenser")
+                .insert(payload)
+                .select()
+                .single();
 
             if (error) throw error;
 
@@ -71,7 +77,9 @@ export default function DispenserForm() {
             setProtocol(protocolNum);
 
             // 3. Webhook N8N
+            // Use the public_token if available (future proofing), or protocol for now
             const linkFinalizar = `https://teste.imagoradiologia.cloud/formularios/dispenser/finalizar?protocolo=${protocolNum}`;
+
             const gpMessage = `*CHAMADO ABERTO (DISPENSER DE ÁLCOOL)*
 Protocolo: ${protocolNum}
 Local: ${params.localizacao}
@@ -83,6 +91,7 @@ ${linkFinalizar}`;
 
             const n8nPayload = {
                 event_type: "abrir",
+                id: (novoChamado as any).id,
                 protocol: protocolNum,
                 dispenser_localizacao: params.localizacao,
                 dispenser_status: values.situacao,

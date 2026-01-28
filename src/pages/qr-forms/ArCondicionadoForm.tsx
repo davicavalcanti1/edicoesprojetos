@@ -5,7 +5,6 @@ import * as z from "zod";
 import { Loader2, Send, CheckCircle2, AlertTriangle, Fan } from "lucide-react";
 import { SimpleLayout } from "@/components/layout/SimpleLayout";
 import { useQueryParams } from "@/hooks/useQueryParams";
-import { sendQrForm } from "@/lib/qr-webhook";
 import { Button } from "@/components/ui/button";
 import {
     Form,
@@ -26,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ArCondicionadoParams } from "@/types/qr-forms";
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
     tipo_solicitacao: z.string().min(1, "Selecione o tipo"),
@@ -58,29 +58,69 @@ export default function ArCondicionadoForm() {
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsSubmitting(true);
         try {
+            // 1. Obter Tenant
+            const { data: tenant } = await supabase.from('tenants').select('id').limit(1).maybeSingle();
+            const tenantId = tenant?.id;
+
+            if (!tenantId) throw new Error("Tenant não encontrado");
+
+            // 2. Insert into Supabase (chamados_ar_condicionado)
             const payload = {
-                tipo: "ar_condicionado" as const,
-                id_qrcode: params.id || 0,
-                localizacao: params.sala || params.localizacao || "Sala Desconhecida",
-                dados_usuario: values,
-                timestamp: new Date().toISOString(),
-                metadata: { ...params }
+                localizacao: params.sala || params.localizacao || "Local Desconhecido",
+                problema: values.tipo_solicitacao,
+                observacao: values.descricao,
+                marca: params.modelo, // Using modelo as brand/generic holder if brand not separate
+                modelo: params.modelo,
+                numero_serie: params.numero_serie,
+                tenant_id: tenantId,
+                status: "aberto"
             };
 
-            // const success = await sendQrForm(payload);
-            // Webhook disabled for AC
-            const success = true;
+            const { data: novoChamado, error } = await supabase
+                .from("chamados_ar_condicionado")
+                .insert(payload)
+                .select()
+                .single();
 
-            if (success) {
-                setIsSuccess(true);
-                toast({
-                    title: "Chamado aberto!",
-                    description: "Equipe de manutenção notificada.",
-                });
-            } else {
-                throw new Error("Falha no envio");
-            }
+            if (error) throw error;
+
+            const protocolNum = (novoChamado as any).protocolo;
+
+            // 3. Webhook (Using Tickets endpoint)
+            const gpMessage = `❄️ *CHAMADO AR-CONDICIONADO*
+Protocolo: ${protocolNum}
+Local: ${payload.localizacao}
+Tipo: ${values.tipo_solicitacao}
+Descrição: ${values.descricao}
+Modelo: ${payload.modelo || '-'} | Série: ${payload.numero_serie || '-'}
+`;
+
+            const n8nPayload = {
+                event_type: "abrir_ac",
+                id: (novoChamado as any).id,
+                protocol: protocolNum,
+                localizacao: payload.localizacao,
+                tipo: values.tipo_solicitacao,
+                descricao: values.descricao,
+                gp_message: gpMessage,
+                submitted_at: new Date().toISOString(),
+                source: "site_ar_condicionado"
+            };
+
+            await fetch("https://n8n.imagoradiologia.cloud/webhook/Tickets/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(n8nPayload)
+            }).catch(console.error);
+
+            setIsSuccess(true);
+            toast({
+                title: "Chamado aberto!",
+                description: `Protocolo: ${protocolNum}`,
+            });
+
         } catch (error) {
+            console.error("Erro ao abrir chamado:", error);
             toast({
                 title: "Erro",
                 description: "Não foi possível enviar o chamado. Tente novamente.",

@@ -1,10 +1,16 @@
+import { useState } from "react";
 import { UseFormReturn } from "react-hook-form";
-import { Droplets } from "lucide-react";
+import { Droplets, Check, ChevronsUpDown } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { FormLabel } from "@/components/ui/form";
 import { OccurrenceFormData } from "@/types/occurrence";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { useDoctors, useEmployees } from "@/hooks/useResources";
 
 interface ExtravasamentoEnfermagemFormProps {
     form: UseFormReturn<OccurrenceFormData>;
@@ -13,12 +19,26 @@ interface ExtravasamentoEnfermagemFormProps {
 export function ExtravasamentoEnfermagemForm({ form }: ExtravasamentoEnfermagemFormProps) {
     const dados = (form.watch("dadosEspecificos") as any) || {};
 
+    // Hooks for resources
+    const { data: doctors = [] } = useDoctors();
+    const { data: employees = [] } = useEmployees();
+
+    // States for Popovers
+    const [openMedico, setOpenMedico] = useState(false);
+    const [openAuxiliar, setOpenAuxiliar] = useState(false);
+    const [openTecnico, setOpenTecnico] = useState(false);
+    const [openCoordenador, setOpenCoordenador] = useState(false);
+
     const updateDados = (field: string, value: any) => {
         form.setValue("dadosEspecificos", {
             ...dados,
             [field]: value,
         });
     };
+
+    // Helpers to find names for display (if storing ID, but here we store Name directly usually for simple fields, but let's encourage Name storage for these legacy fields unless we refactor to IDs. The form stores names currently.)
+    // Let's store Names to maintain compatibility with existing payload structure unless instructed to change to IDs.
+    // The user requirement said: "utilizar as tabelas existentes no banco de dados".
 
     return (
         <div className="space-y-6">
@@ -150,12 +170,47 @@ export function ExtravasamentoEnfermagemForm({ form }: ExtravasamentoEnfermagemF
 
                     <div className="space-y-2">
                         <FormLabel>Qual médico avaliou?</FormLabel>
-                        <Input
-                            placeholder="Nome do médico"
-                            value={dados.medicoAvaliou || ""}
-                            onChange={(e) => updateDados("medicoAvaliou", e.target.value)}
-                            className="bg-background"
-                        />
+                        <Popover open={openMedico} onOpenChange={setOpenMedico}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={openMedico}
+                                    className="w-full justify-between bg-background"
+                                >
+                                    {dados.medicoAvaliou || "Selecione o médico..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0 z-50">
+                                <Command>
+                                    <CommandInput placeholder="Buscar médico..." />
+                                    <CommandList>
+                                        <CommandEmpty>Nenhum médico encontrado.</CommandEmpty>
+                                        <CommandGroup>
+                                            {doctors.map((doctor) => (
+                                                <CommandItem
+                                                    key={doctor.id}
+                                                    value={doctor.nome}
+                                                    onSelect={() => {
+                                                        updateDados("medicoAvaliou", doctor.nome);
+                                                        setOpenMedico(false);
+                                                    }}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            dados.medicoAvaliou === doctor.nome ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    {doctor.nome}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 </div>
             </div>
@@ -167,37 +222,142 @@ export function ExtravasamentoEnfermagemForm({ form }: ExtravasamentoEnfermagemF
                 <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                         <FormLabel>Auxiliar de enfermagem responsável</FormLabel>
-                        <Input
-                            placeholder="Nome"
-                            value={dados.auxiliarEnfermagem || ""}
-                            onChange={(e) => updateDados("auxiliarEnfermagem", e.target.value)}
-                            className="bg-background"
-                        />
+                        <Popover open={openAuxiliar} onOpenChange={setOpenAuxiliar}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={openAuxiliar}
+                                    className="w-full justify-between bg-background"
+                                >
+                                    {dados.auxiliarEnfermagem || "Selecione..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0 z-50">
+                                <Command>
+                                    <CommandInput placeholder="Buscar funcionário..." />
+                                    <CommandList>
+                                        <CommandEmpty>Nenhum funcionário encontrado.</CommandEmpty>
+                                        <CommandGroup>
+                                            {employees.map((emp) => (
+                                                <CommandItem
+                                                    key={emp.id}
+                                                    value={emp.nome}
+                                                    onSelect={() => {
+                                                        updateDados("auxiliarEnfermagem", emp.nome);
+                                                        setOpenAuxiliar(false);
+                                                    }}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            dados.auxiliarEnfermagem === emp.nome ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    {emp.nome}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
                     </div>
 
                     <div className="space-y-2">
                         <FormLabel>Técnico de radiologia responsável</FormLabel>
-                        <Input
-                            placeholder="Nome"
-                            value={dados.tecnicoRadiologia || ""}
-                            onChange={(e) => updateDados("tecnicoRadiologia", e.target.value)}
-                            className="bg-background"
-                        />
+                        <Popover open={openTecnico} onOpenChange={setOpenTecnico}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={openTecnico}
+                                    className="w-full justify-between bg-background"
+                                >
+                                    {dados.tecnicoRadiologia || "Selecione..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0 z-50">
+                                <Command>
+                                    <CommandInput placeholder="Buscar funcionário..." />
+                                    <CommandList>
+                                        <CommandEmpty>Nenhum funcionário encontrado.</CommandEmpty>
+                                        <CommandGroup>
+                                            {employees.map((emp) => (
+                                                <CommandItem
+                                                    key={emp.id}
+                                                    value={emp.nome}
+                                                    onSelect={() => {
+                                                        updateDados("tecnicoRadiologia", emp.nome);
+                                                        setOpenTecnico(false);
+                                                    }}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            dados.tecnicoRadiologia === emp.nome ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    {emp.nome}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
                         <FormLabel>Coordenador responsável</FormLabel>
-                        <Input
-                            placeholder="Nome"
-                            value={dados.coordenadorResponsavel || ""}
-                            onChange={(e) => updateDados("coordenadorResponsavel", e.target.value)}
-                            className="bg-background"
-                        />
+                        <Popover open={openCoordenador} onOpenChange={setOpenCoordenador}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={openCoordenador}
+                                    className="w-full justify-between bg-background"
+                                >
+                                    {dados.coordenadorResponsavel || "Selecione..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0 z-50">
+                                <Command>
+                                    <CommandInput placeholder="Buscar funcionário..." />
+                                    <CommandList>
+                                        <CommandEmpty>Nenhum funcionário encontrado.</CommandEmpty>
+                                        <CommandGroup>
+                                            {employees.map((emp) => (
+                                                <CommandItem
+                                                    key={emp.id}
+                                                    value={emp.nome}
+                                                    onSelect={() => {
+                                                        updateDados("coordenadorResponsavel", emp.nome);
+                                                        setOpenCoordenador(false);
+                                                    }}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            dados.coordenadorResponsavel === emp.nome ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    {emp.nome}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 </div>
             </div>
 
-            {/* File attachment hint - The actual upload is handled by the main form wrapper */}
+            {/* File attachment hint */}
             <div className="rounded-xl border border-dashed border-border bg-card/50 p-6 text-center">
                 <p className="text-sm text-muted-foreground">
                     Utilize a seção de anexos abaixo para adicionar arquivos relacionados (Fotos, Documentos, etc).

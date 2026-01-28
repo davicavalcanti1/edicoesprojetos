@@ -67,61 +67,129 @@ export interface OccurrenceOutcome {
   definidoEm?: string;
 }
 
-// Unified UI Interface
-export interface Occurrence {
+// ==============================================================================
+// DATABASE MODELS (Reflecting specific table structures)
+// ==============================================================================
+
+export interface BaseOccurrence {
   id: string;
   protocolo: string;
-  tenantId: string;
-  tipo: OccurrenceType;
-  subtipo: OccurrenceSubtype;
-
-  // Status & Triage
-  status: OccurrenceStatus;
-  triagem?: TriageClassification;
-  triagemPor?: string;
-  triagemEm?: string;
-
-  // Details
-  descricaoDetalhada: string;
-  acaoImediata?: string;
-  impactoPercebido?: string;
-  pessoasEnvolvidas?: string;
-  contemDadoSensivel?: boolean;
-  dadosEspecificos?: Record<string, any>;
-
-  // Patient
-  paciente?: {
-    nomeCompleto?: string;
-    idPaciente?: string;
-    dataNascimento?: string;
-    telefone?: string;
-    tipoExame?: string;
-    unidadeLocal?: string;
-    dataHoraEvento?: string;
-    sexo?: string;
-  };
-
-  // Outcome
-  desfecho?: OccurrenceOutcome;
-  desfecho_tipos?: OutcomeType[];
-  desfecho_justificativa?: string;
-  desfecho_principal?: OutcomeType;
-  desfecho_definido_por?: string;
-  desfecho_definido_em?: string;
-
-
-  // Meta
-  criadoPor: string;
-  criadorNome?: string;
-  criadoEm: string;
-  atualizadoEm: string;
-
-  // Legacy / Mapped fields for UI compat
-  [key: string]: any;
+  tenant_id: string;
+  criado_por?: string;
+  criado_em: string;
+  atualizado_em: string;
+  original_table?: string; // Helper for frontend logic
 }
 
-export interface DbOccurrence extends Occurrence {
-  // Database specific fields if needed
+export interface OcorrenciaAdm extends BaseOccurrence {
+  tipo: "administrativa"; // Fixed 'administrativa'
+  subtipo?: string;
+  status: OccurrenceStatus;
+
+  // Base fields
+  titulo?: string;
+  descricao_detalhada?: string;
+  prioridade?: string;
+  atribuido_a?: string;
+
+  // Snapshot Paciente (Less strict)
+  paciente_nome?: string;
+  paciente_cpf?: string;
+  paciente_telefone?: string;
+  paciente_data_nascimento?: string;
+
+  // Signatures
+  assinatura_responsavel_url?: string;
+  assinatura_testemunha_url?: string;
+  assinatura_envolvido_url?: string;
+
+  dados_adicionais?: Record<string, any>;
+}
+
+export interface OcorrenciaLaudo extends BaseOccurrence {
+  tipo: "revisao_exame" | "assistencial"; // 'assistencial' is legacy alias
+  subtipo?: string;
+  status: OccurrenceStatus; // default: aguardando_envio
+
+  // Paciente
+  paciente_nome: string;
+  paciente_cpf?: string;
+  paciente_data_nascimento?: string;
+  paciente_telefone?: string;
+
+  // Exame
+  exame_tipo: string;
+  exame_regiao?: string;
+  exame_data?: string;
+  exame_unidade?: string;
+
+  medico_responsavel_laudo?: string;
+  medico_responsavel_laudo_id?: string;
+  laudo_entregue?: boolean;
+
+  // Review
+  motivo_revisao: string;
+  motivo_revisao_outro?: string;
+  tipo_discrepancia?: string;
+
+  // Actions
+  acao_tomada?: string;
+  pessoas_comunicadas?: string;
+
+  dados_adicionais?: Record<string, any>;
+
+  // Medical Flow
+  triagem_nivel?: number;
+  triagem_observacao?: string;
+  medico_revisor_nome?: string;
+  medico_revisor_id?: string;
+  public_token?: string;
+
+  // Outcome
+  desfecho_tipo?: string;
+  desfecho_observacao?: string;
+}
+
+export interface OcorrenciaEnf extends BaseOccurrence {
+  tipo: "enfermagem";
+  subtipo: "extravasamento_enfermagem" | "reacoes_adversas";
+  status: OccurrenceStatus;
+
+  // Paciente
+  paciente_nome: string;
+  paciente_cpf?: string;
+  paciente_data_nascimento?: string;
+  paciente_telefone?: string;
+  paciente_tipo_exame?: string;
+  paciente_unidade_local?: string;
+  paciente_data_hora_evento?: string;
+
+  // Details
+  medico_avaliou?: string;
+  conduta?: string;
+  volume_injetado_ml?: string;
+  calibre_acesso?: string;
+  fez_rx?: boolean;
+  teve_compressa?: boolean;
+  contraste_utilizado?: string;
+  validade_lote?: string;
+
+  responsavel_auxiliar_enf?: string;
+  responsavel_tecnico_raio_x?: string;
+  responsavel_coordenador?: string;
+
+  dados_adicionais?: Record<string, any>;
+}
+
+// Union Type used by UI components
+export type AnyOccurrence = OcorrenciaAdm | OcorrenciaLaudo | OcorrenciaEnf | (BaseOccurrence & { tipo: string;[key: string]: any });
+
+// Deprecated UI Interface (Used only for legacy compatibility during migration)
+export interface Occurrence extends BaseOccurrence {
+  tipo: any;
+  subtipo: any;
+  status: any;
+  [key: string]: any;
 }
 
 // ==============================================================================

@@ -32,7 +32,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
-import { MEDICOS } from "@/constants/doctors";
+import { useDoctors } from "@/hooks/useResources";
 
 // Lista de tipos de exame
 const tiposExame = [
@@ -103,6 +103,8 @@ const motivosRevisao = [
 
 export function RevisaoExameForm({ form, pendingFiles = [], onFilesChange }: RevisaoExameFormProps) {
   const dados = (form.watch("dadosEspecificos") as any) || {};
+  const { data: doctors = [] } = useDoctors();
+
   const [openTipoExame, setOpenTipoExame] = useState(false);
   const [openRegiao, setOpenRegiao] = useState(false);
   const [openMedico, setOpenMedico] = useState(false);
@@ -117,7 +119,7 @@ export function RevisaoExameForm({ form, pendingFiles = [], onFilesChange }: Rev
 
   const selectedTipoExame = tiposExame.find(t => t.value === dados.exameModalidade);
   const selectedRegiao = regioesAnatomicas.find(r => r.value === dados.exameRegiao);
-  const selectedMedico = MEDICOS.find(m => m.id === dados.medicoResponsavelId);
+  const selectedMedico = doctors.find(m => m.id === dados.medicoResponsavelId);
 
   return (
     <div className="space-y-6">
@@ -303,14 +305,13 @@ export function RevisaoExameForm({ form, pendingFiles = [], onFilesChange }: Rev
                   <CommandList>
                     <CommandEmpty>Nenhum médico encontrado.</CommandEmpty>
                     <CommandGroup>
-                      {MEDICOS.map((medico) => (
+                      {doctors.map((medico) => (
                         <CommandItem
                           key={medico.id}
-                          value={medico.nome} // Search by name
+                          value={medico.nome}
                           onSelect={() => {
-                            // Force value update
                             updateDados("medicoResponsavelId", medico.id);
-                            updateDados("medicoResponsavel", medico.nome);
+                            updateDados("medicoResponsavel", medico.nome); // Redundant but safe
                             setOpenMedico(false);
                           }}
                         >

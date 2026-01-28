@@ -9,8 +9,8 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { BaseInfoBlock } from "@/components/forms/BaseInfoBlock";
-import { RevisaoExameForm, ExtravasamentoEnfermagemForm, ReacoesAdversasForm } from "@/components/forms/subtypes";
-import { useCreateOccurrence, useCreateNursingOccurrence } from "@/hooks/useOccurrences";
+import { RevisaoExameForm, ExtravasamentoEnfermagemForm, ReacoesAdversasForm, PacienteForm, LivreForm } from "@/components/forms/subtypes";
+import { useCreateOccurrence, useCreateNursingOccurrence, useCreatePatientOccurrence, useCreateFreeOccurrence } from "@/hooks/useOccurrences";
 import { useUploadAttachments, getSignedUrlsForAttachments } from "@/hooks/useAttachments";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -89,6 +89,8 @@ export default function NovaOcorrenciaForm() {
   const { tipo, subtipo } = useParams<{ tipo: string; subtipo: string }>();
   const createOccurrence = useCreateOccurrence();
   const createNursingOccurrence = useCreateNursingOccurrence();
+  const createPatientOccurrence = useCreatePatientOccurrence();
+  const createFreeOccurrence = useCreateFreeOccurrence();
   const uploadAttachments = useUploadAttachments();
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -224,14 +226,30 @@ export default function NovaOcorrenciaForm() {
           paciente_nome_completo: data.paciente.nomeCompleto,
           paciente_telefone: data.paciente.telefone,
           paciente_id: data.paciente.idPaciente,
-          paciente_data_nascimento: convertToDbDate(data.paciente.dataNascimento),
-          paciente_tipo_exame: data.paciente.tipoExame,
+          paciente_data_nascimento: data.paciente.dataNascimento, // Let hook handle conversion
+          paciente_tipo_exame: data.paciente.tipoExame, // Not stored but passed
           paciente_unidade_local: data.unidadeLocal,
           paciente_data_hora_evento: data.dataHoraEvento,
-          // paciente_sexo: data.paciente.sexo, // Nursing table might not need sex if not in SQL
           descricao_detalhada: JSON.stringify(data.dadosEspecificos || {}),
           dados_especificos: data.dadosEspecificos,
-          // medico_destino: ... 
+          conduta: data.dadosEspecificos?.conduta // Extract conduta
+        });
+      } else if (data.tipo === 'paciente') {
+        occurrence = await createPatientOccurrence.mutateAsync({
+          tipo: data.tipo,
+          subtipo: data.subtipo,
+          paciente: data.paciente,
+          descricao_detalhada: data.dadosEspecificos?.relato || JSON.stringify(data.dadosEspecificos),
+          dados_especificos: data.dadosEspecificos
+        });
+      } else if (data.tipo === 'livre') {
+        occurrence = await createFreeOccurrence.mutateAsync({
+          tipo: data.tipo,
+          subtipo: data.subtipo,
+          titulo: data.dadosEspecificos?.titulo,
+          descricao: data.dadosEspecificos?.descricao,
+          paciente: data.paciente,
+          dados_especificos: data.dadosEspecificos
         });
       } else if (data.tipo === 'administrativa') {
         occurrence = await createOccurrence.mutateAsync({
@@ -263,13 +281,11 @@ export default function NovaOcorrenciaForm() {
 
       // Determine origin table for attachments
       let originTable = 'occurrences';
-      if (data.tipo === 'enfermagem') {
-        originTable = 'ocorrencias_enf';
-      } else if (data.tipo === 'revisao_exame') {
-        originTable = 'ocorrencias_laudo';
-      } else if (data.tipo === 'administrativa') {
-        originTable = 'ocorrencias_adm';
-      }
+      if (data.tipo === 'enfermagem') originTable = 'ocorrencias_enf';
+      else if (data.tipo === 'revisao_exame') originTable = 'ocorrencias_laudo';
+      else if (data.tipo === 'administrativa') originTable = 'ocorrencias_adm';
+      else if (data.tipo === 'paciente') originTable = 'ocorrencia_paciente';
+      else if (data.tipo === 'livre') originTable = 'ocorrencia_livre';
 
       // Upload attachments
       if (pendingFiles.length > 0 && profile) {
@@ -308,33 +324,117 @@ export default function NovaOcorrenciaForm() {
 
       // Trigger Webhook
       try {
-        const webhookPayload = {
+        let webhookPayload: any = {
           evento: "nova_ocorrencia",
           id: occurrence.id,
           protocolo: occurrence.protocolo,
           tipo: occurrence.tipo,
           subtipo: occurrence.subtipo,
           status: occurrence.status,
-          descricao_detalhada: occurrence.descricao_detalhada,
-          acao_imediata: occurrence.acao_imediata,
-          impacto_percebido: occurrence.impacto_percebido,
-          paciente_nome_completo: occurrence.paciente_nome_completo,
-          paciente_id: occurrence.paciente_id,
-          paciente_telefone: occurrence.paciente_telefone,
-          paciente_tipo_exame: occurrence.paciente_tipo_exame,
-          paciente_unidade_local: occurrence.paciente_unidade_local,
-          paciente_data_nascimento: occurrence.paciente_data_nascimento,
-          paciente_data_hora_evento: occurrence.paciente_data_hora_evento,
-          pessoas_envolvidas: occurrence.pessoas_envolvidas,
-          contem_dado_sensivel: occurrence.contem_dado_sensivel,
-          dados_especificos: occurrence.dados_especificos,
           criado_em: occurrence.criado_em,
           criado_por: profile?.id,
           criado_por_nome: profile?.full_name,
           link: `${window.location.origin}/ocorrencias/${occurrence.id}`,
-          anexos: attachmentsForWebhook,
           timestamp: new Date().toISOString(),
+          anexos: attachmentsForWebhook,
         };
+
+        // Specific Payload Builder based on Type
+        if (data.tipo === 'enfermagem') {
+          webhookPayload = {
+            ...webhookPayload,
+            evento: "nova_ocorrencia_enf",
+            tipo_incidente: data.subtipo,
+            paciente: {
+              nome: data.paciente.nomeCompleto,
+              prontuario: data.paciente.idPaciente,
+              data_nascimento: data.paciente.dataNascimento,
+              unidade: data.unidadeLocal
+            },
+            checklist: data.dadosEspecificos,
+            conduta: data.dadosEspecificos?.conduta,
+            descricao_resumo: `Enfermagem: ${data.subtipo}`
+          };
+        } else if (data.tipo === 'paciente') {
+          webhookPayload = {
+            ...webhookPayload,
+            evento: "nova_ocorrencia_paciente",
+            paciente: {
+              nome: data.paciente.nomeCompleto,
+              cpf: data.paciente.cpf,
+              telefone: data.paciente.telefone,
+              email: data.dadosEspecificos?.email
+            },
+            relato: data.dadosEspecificos?.relato,
+            area_envolvida: data.dadosEspecificos?.areaEnvolvida,
+            classificacao: data.dadosEspecificos?.classificacao,
+            descricao_resumo: `Paciente: ${data.subtipo}`
+          };
+        } else if (data.tipo === 'livre') {
+          webhookPayload = {
+            ...webhookPayload,
+            evento: "nova_ocorrencia_livre",
+            titulo: data.dadosEspecificos?.titulo,
+            descricao: data.dadosEspecificos?.descricao,
+            paciente_nome: data.paciente.nomeCompleto,
+            descricao_resumo: `Livre: ${data.dadosEspecificos?.titulo || data.subtipo}`
+          };
+        } else if (data.tipo === 'revisao_exame' || data.subtipo === 'revisao_exame') {
+          webhookPayload = {
+            ...webhookPayload,
+            evento: "nova_ocorrencia_laudo", // Event specific tag
+            paciente: {
+              nome: data.paciente.nomeCompleto,
+              cpf: data.paciente.cpf,
+              data_nascimento: data.paciente.dataNascimento,
+              telefone: data.paciente.telefone,
+            },
+            exame: {
+              tipo: data.paciente.tipoExame,
+              regiao: data.dadosEspecificos?.exameRegiao,
+              data: data.dadosEspecificos?.exameData,
+              unidade: data.unidadeLocal
+            },
+            revisao: {
+              medico_responsavel: data.dadosEspecificos?.medicoResponsavelId, // Or Name if available
+              laudo_entregue: data.dadosEspecificos?.laudoEntregue === 'sim',
+              motivo: data.dadosEspecificos?.motivoRevisao,
+              motivo_outro: data.dadosEspecificos?.motivoRevisaoOutro,
+              discrepancia: data.dadosEspecificos?.tipoDiscrepancia
+            },
+            acao_tomada: data.dadosEspecificos?.acaoTomada,
+            pessoas_comunicadas: data.dadosEspecificos?.pessoasComunicadas,
+            // Fallback description for generic readers
+            descricao_resumo: `Revisão de Laudo: ${data.dadosEspecificos?.motivoRevisao}`
+          };
+        } else if (data.tipo === 'administrativa') {
+          // Administrative Payload
+          webhookPayload = {
+            ...webhookPayload,
+            evento: "nova_ocorrencia_adm",
+            categoria: data.subtipo,
+            descricao_detalhada: data.dadosEspecificos?.descricao || "Sem descrição detalhada",
+            paciente: {
+              nome: data.paciente.nomeCompleto,
+              cpf: data.paciente.cpf,
+              unidade: data.unidadeLocal,
+              id: data.paciente.idPaciente,
+              telefone: data.paciente.telefone
+            },
+            dados_especificos: data.dadosEspecificos,
+            // Fallback for list views
+            descricao_resumo: `Administrativa: ${data.subtipo}`
+          };
+        } else {
+          // Standard/Generic Payload Fallback
+          webhookPayload = {
+            ...webhookPayload,
+            descricao_detalhada: occurrence.descricao_detalhada || JSON.stringify(data.dadosEspecificos),
+            paciente_nome_completo: data.paciente.nomeCompleto,
+            paciente_unidade_local: data.unidadeLocal,
+            dados_especificos: data.dadosEspecificos
+          };
+        }
 
         // Fire and forget
         fetch("https://n8n.imagoradiologia.cloud/webhook/envio", {
@@ -342,7 +442,6 @@ export default function NovaOcorrenciaForm() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(webhookPayload),
         }).catch(err => console.error("Webhook error:", err));
-
       } catch (webhookError) {
         console.error("Error creating webhook payload:", webhookError);
       }
@@ -412,6 +511,14 @@ export default function NovaOcorrenciaForm() {
 
                 {subtipo === "reacoes_adversas" && (
                   <ReacoesAdversasForm form={form} />
+                )}
+
+                {tipo === "paciente" && (
+                  <PacienteForm form={form} />
+                )}
+
+                {tipo === "livre" && (
+                  <LivreForm form={form} />
                 )}
 
                 {/* Generic Attachment Upload for Enfermagem Forms */}

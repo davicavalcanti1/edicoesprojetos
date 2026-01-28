@@ -98,6 +98,23 @@ export default function OccurrenceDetail() {
         setPacienteDataNascimento("");
       }
 
+      // Handle Description Mapping
+      if (occurrence.tipo === 'revisao_exame') {
+        let desc = `Motivo: ${occurrence.motivo_revisao || "Não informado"}`;
+        if (occurrence.motivo_revisao === 'Outro' && occurrence.motivo_revisao_outro) {
+          desc += ` - ${occurrence.motivo_revisao_outro}`;
+        }
+        if (occurrence.tipo_discrepancia) {
+          desc += `\nTipo de Discrepância: ${occurrence.tipo_discrepancia}`;
+        }
+        if (occurrence.acao_tomada) {
+          desc += `\nAção Tomada: ${occurrence.acao_tomada}`;
+        }
+        setDescricaoDetalhada(desc);
+      } else {
+        setDescricaoDetalhada(occurrence.descricao_detalhada || "");
+      }
+
       if (occurrence.desfecho_tipos) {
         setOutcome({
           tipos: occurrence.desfecho_tipos as OutcomeType[],
@@ -182,9 +199,9 @@ export default function OccurrenceDetail() {
 
   const handleStatusChange = (newStatus: OccurrenceStatus) => {
     updateStatus.mutate({
-      occurrenceId: occurrence.id,
-      currentStatus: occurrence.status as OccurrenceStatus,
-      newStatus,
+      id: occurrence.id,
+      status: newStatus,
+      original_table: occurrence.original_table, // Fix: Pass required table
     });
   };
 
@@ -192,6 +209,7 @@ export default function OccurrenceDetail() {
     updateOccurrence.mutate({
       id: occurrence.id,
       triagem: triage,
+      original_table: occurrence.original_table, // Fix: Pass required table
     }, {
       onSuccess: () => {
         toast({
@@ -241,6 +259,7 @@ export default function OccurrenceDetail() {
     try {
       await updateOccurrence.mutateAsync({
         id: occurrence.id,
+        original_table: occurrence.original_table, // Fix: Required
         desfecho_tipos: selectedOutcomes,
         desfecho_justificativa: outcome.justificativa,
         notificacao_orgao: externalNotification.orgaoNotificado,
@@ -263,7 +282,8 @@ export default function OccurrenceDetail() {
       // Upload pending files if any
       if (pendingFiles.length > 0) {
         await uploadAttachments.mutateAsync({
-          occurrenceId: occurrence.id,
+          originId: occurrence.id,
+          originTable: occurrence.original_table, // Fix: Required
           files: pendingFiles.map(pf => pf.file),
           userId: profile?.id || "",
         });

@@ -22,12 +22,42 @@ export function useAttachmentsWithSignedUrls(originId: string | undefined, origi
     queryFn: async () => {
       if (!originId || !originTable) return [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("attachments" as any)
         .select("*")
-        .eq("origin_id", originId)
-        .eq("origin_table", originTable)
         .order("uploaded_at", { ascending: true });
+
+      // Apply specific FK filter
+      switch (originTable) {
+        case 'ocorrencias_laudo':
+          query = query.eq('ocorrencia_laudo_id', originId);
+          break;
+        case 'ocorrencias_adm':
+          query = query.eq('ocorrencia_adm_id', originId);
+          break;
+        case 'ocorrencias_enf':
+          query = query.eq('ocorrencia_enf_id', originId);
+          break;
+        case 'chamados_dispenser':
+          query = query.eq('chamado_dispenser_id', originId);
+          break;
+        case 'chamados_banheiro':
+          query = query.eq('chamado_banheiro_id', originId);
+          break;
+        case 'chamados_ar_condicionado':
+          query = query.eq('chamado_ar_condicionado_id', originId);
+          break;
+        case 'ocorrencia_paciente':
+          query = query.eq('ocorrencia_paciente_id', originId);
+          break;
+        case 'ocorrencia_livre':
+          query = query.eq('ocorrencia_livre_id', originId);
+          break;
+        default:
+          return [];
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -90,17 +120,47 @@ export function useUploadAttachments() {
         }
 
         // Insert into database 'attachments'
-        const payload = {
+        const payload: any = {
           tenant_id: profile.tenant_id,
-          origin_table: originTable,
-          origin_id: originId,
           file_name: file.name,
           file_type: file.type,
           file_size: file.size,
           file_url: filePath,
           is_image: isImage,
           uploaded_by: userId,
+          // Generic tag for filtering if needed
+          tag: 'upload',
         };
+
+        // Map originTable to specific FK column
+        switch (originTable) {
+          case 'ocorrencias_laudo':
+            payload.ocorrencia_laudo_id = originId;
+            break;
+          case 'ocorrencias_adm':
+            payload.ocorrencia_adm_id = originId;
+            break;
+          case 'ocorrencias_enf':
+            payload.ocorrencia_enf_id = originId;
+            break;
+          case 'chamados_dispenser':
+            payload.chamado_dispenser_id = originId;
+            break;
+          case 'chamados_banheiro':
+            payload.chamado_banheiro_id = originId;
+            break;
+          case 'chamados_ar_condicionado':
+            payload.chamado_ar_condicionado_id = originId;
+            break;
+          case 'ocorrencia_paciente':
+            payload.ocorrencia_paciente_id = originId;
+            break;
+          case 'ocorrencia_livre':
+            payload.ocorrencia_livre_id = originId;
+            break;
+          default:
+            throw new Error(`Tabela de origem desconhecida: ${originTable}`);
+        }
 
         const { data, error: insertError } = await supabase
           .from("attachments" as any)
