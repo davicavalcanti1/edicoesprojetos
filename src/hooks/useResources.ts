@@ -20,13 +20,13 @@ export function useDoctors() {
         queryKey: ["doctors"],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from("doctors" as any)
+                .from("medicos" as any)
                 .select("*")
                 .eq("ativo", true)
                 .order("nome");
 
             if (error) throw error;
-            return data as Doctor[];
+            return (data || []) as unknown as Doctor[];
         },
         staleTime: 1000 * 60 * 60, // 1 hour
     });
@@ -49,7 +49,7 @@ export function useEmployees(role?: string) {
             const { data, error } = await query;
 
             if (error) throw error;
-            return data as Employee[];
+            return (data || []) as unknown as Employee[];
         },
         staleTime: 1000 * 60 * 60, // 1 hour
     });

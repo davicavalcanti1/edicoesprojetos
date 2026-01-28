@@ -29,7 +29,7 @@ export function useAttachmentsWithSignedUrls(originId: string | undefined, origi
 
       // Apply specific FK filter
       switch (originTable) {
-        case 'ocorrencias_laudo':
+        case 'ocorrencia_laudo':
           query = query.eq('ocorrencia_laudo_id', originId);
           break;
         case 'ocorrencias_adm':

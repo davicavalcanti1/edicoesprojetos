@@ -41,7 +41,7 @@ export function useOccurrences() {
       const [admRes, enfRes, laudoRes, pacRes, livreRes] = await Promise.all([
         supabase.from("ocorrencias_adm" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
         supabase.from("ocorrencias_enf" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
-        supabase.from("ocorrencias_laudo" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
+        supabase.from("ocorrencia_laudo" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
         supabase.from("ocorrencia_paciente" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
         supabase.from("ocorrencia_livre" as any).select("*").eq('tenant_id', tenantId).order("criado_em", { ascending: false }),
       ]);
@@ -99,7 +99,7 @@ export function useOccurrences() {
         criado_em: item.criado_em,
         criado_por: item.criado_por,
         paciente_nome: item.paciente_nome,
-        original_table: 'ocorrencias_laudo',
+        original_table: 'ocorrencia_laudo',
         raw_data: item
       }));
 
@@ -155,7 +155,7 @@ export function useOccurrence(id: string | undefined) {
       // This is inefficient but necessary given the separation without a unified ID index
       // Alternatively, we could query based on the 'type' if passed, but useOccurrence usually just has ID.
 
-      const tables = ['ocorrencias_adm', 'ocorrencias_enf', 'ocorrencias_laudo', 'ocorrencia_paciente', 'ocorrencia_livre'];
+      const tables = ['ocorrencias_adm', 'ocorrencias_enf', 'ocorrencia_laudo', 'ocorrencia_paciente', 'ocorrencia_livre'];
 
       for (const table of tables) {
         const { data, error } = await supabase
@@ -218,7 +218,7 @@ export function useMedicalOccurrences() {
     queryKey: ["medical-occurrences-new", profile?.tenant_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("ocorrencias_laudo" as any)
+        .from("ocorrencia_laudo" as any)
         .select("*")
         .order("criado_em", { ascending: false });
       if (error) throw error;
@@ -397,7 +397,7 @@ export function useCreateOccurrence() {
         };
 
         const { data: res, error } = await (supabase
-          .from("ocorrencias_laudo" as any) as any)
+          .from("ocorrencia_laudo" as any) as any)
           .insert(payload)
           .select()
           .single();
@@ -563,7 +563,7 @@ export function useCreateMedicalOccurrence() {
       };
 
       const { data: res, error } = await (supabase
-        .from("ocorrencias_laudo" as any) as any)
+        .from("ocorrencia_laudo" as any) as any)
         .insert(payload)
         .select()
         .single();
