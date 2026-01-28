@@ -80,7 +80,7 @@ export default function Ocorrencias() {
       } else if (item.original_table === 'ocorrencias_enf') {
         sourceOrigin = 'nursing';
         normalizedType = 'enfermagem';
-      } else if (item.original_table === 'ocorrencias_laudo') {
+      } else if (item.original_table === 'ocorrencia_laudo') {
         sourceOrigin = 'assistencial';
         normalizedType = 'revisao_exame';
       } else if (item.original_table === 'occurrences') {

@@ -134,7 +134,7 @@ export function useUploadAttachments() {
 
         // Map originTable to specific FK column
         switch (originTable) {
-          case 'ocorrencias_laudo':
+          case 'ocorrencia_laudo':
             payload.ocorrencia_laudo_id = originId;
             break;
           case 'ocorrencias_adm':
