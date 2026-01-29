@@ -160,12 +160,10 @@ export default function Ocorrencias() {
 
   // Handlers
   const handleNavigate = (item: any) => {
-    if (item.original_table === 'ocorrencia_enf') {
-      navigate(`/ocorrencias/enfermagem/${item.id}`);
-    } else if (item.original_table === 'ocorrencia_adm') {
+    if (item.original_table === 'ocorrencia_adm') {
       navigate(`/ocorrencias/admin/${item.id}`);
     } else {
-      // assistencial, occurrences (livre, paciente), laudo
+      // assistencial, nursing, occurrences (livre, paciente), laudo
       navigate(`/ocorrencias/${item.id}`);
     }
   };
