@@ -39,6 +39,7 @@ import {
   requiresExternalNotification,
   OutcomeType,
   TriageClassification,
+  subtypeLabels
 } from "@/types/occurrence";
 
 const typeConfig = {
@@ -55,9 +56,9 @@ const labelMapping: Record<string, string> = {
   compressa: "Compressa?",
   conduta: "Conduta",
   medicoAvaliou: "Médico Avaliou?",
-  responsavelAuxiliarEnf: "Responsável Auxiliar Enfermagem",
-  responsavelTecnicoRaioX: "Responsável Técnico Raio-X",
-  responsavelCoordenador: "Responsável Coordenador",
+  responsavelAuxiliarEnf: "Auxiliar de Enfermagem Responsável",
+  responsavelTecnicoRaioX: "Técnico de Radiologia Responsável",
+  responsavelCoordenador: "Coordenador Responsável",
   motivoRevisao: "Motivo da Revisão",
   motivoRevisaoOutro: "Outro Motivo",
   tipoDiscrepancia: "Tipo de Discrepância",
@@ -76,6 +77,8 @@ const labelMapping: Record<string, string> = {
 
 const formatValue = (key: string, value: any): string => {
   if (typeof value === 'boolean') return value ? "Sim" : "Não";
+  if (String(value).toLowerCase() === 'true') return "Sim";
+  if (String(value).toLowerCase() === 'false') return "Não";
   if (!value) return "-";
   return String(value);
 };
@@ -113,6 +116,7 @@ export default function OccurrenceDetail() {
   const [impactoPercebido, setImpactoPercebido] = useState<string>("");
   const [medicoDestino, setMedicoDestino] = useState<string>("");
   const [pacienteDataNascimento, setPacienteDataNascimento] = useState<string>("");
+  const [conduta, setConduta] = useState<string>("");
 
   useEffect(() => {
     if (occurrence) {
@@ -159,9 +163,9 @@ export default function OccurrenceDetail() {
         dadosAdicionais.descricao_detalhada || // Nursing fallback
         "";
 
-      // Specific fallback for 'enfermagem' if no description found yet
-      if (raw.tipo === 'assistencial' && !description) { // 'assistencial' is the type for 'enfermagem' occurrences
-        description = raw.subtipo || "";
+      // Specific fallback for 'enfermagem' to show formatted subtype if no description
+      if ((raw.tipo === 'enfermagem' || raw.tipo === 'assistencial') && !description) {
+        description = subtypeLabels[raw.subtipo as string] || raw.subtipo?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || "";
       }
 
       setDescricaoDetalhada(description);
@@ -170,6 +174,8 @@ export default function OccurrenceDetail() {
       if (raw.tipo === 'administrativa' && !raw.descricao_detalhada && !raw.descricao) {
         setDescricaoDetalhada(raw.titulo || "Ocorrência Administrativa");
       }
+
+      setConduta(raw.conduta || dadosAdicionais.conduta || "");
 
       setImpactoPercebido(raw.impacto_percebido || dadosAdicionais.impacto_percebido || "");
       setMedicoDestino(raw.medico_destino || raw.medico_responsavel_laudo || ""); // Show doctor for laudo
@@ -350,9 +356,9 @@ export default function OccurrenceDetail() {
 
     setIsSaving(true);
     try {
-      await updateOccurrence.mutateAsync({
+      const updatePayload: any = {
         id: occurrence.id,
-        original_table: occurrence.original_table, // Fix: Required
+        original_table: occurrence.original_table,
         desfecho_tipos: selectedOutcomes,
         desfecho_justificativa: outcome.justificativa,
         notificacao_orgao: externalNotification.orgaoNotificado,
@@ -367,10 +373,23 @@ export default function OccurrenceDetail() {
           const [day, month, year] = pacienteDataNascimento.split("/");
           return `${year}-${month}-${day}`;
         })(),
-        descricao_detalhada: descricaoDetalhada,
         impacto_percebido: impactoPercebido,
         medico_destino: medicoDestino,
-      });
+      };
+
+      // Specific handling for Nursing (ocorrencia_enf)
+      if (occurrence.original_table === 'ocorrencia_enf') {
+        updatePayload.conduta = conduta;
+        // Description is JSONB in 'dados_adicionais'
+        updatePayload.dados_adicionais = {
+          ...(occurrence.dados_adicionais || {}),
+          descricao_detalhada: descricaoDetalhada
+        };
+      } else {
+        updatePayload.descricao_detalhada = descricaoDetalhada;
+      }
+
+      await updateOccurrence.mutateAsync(updatePayload);
 
       // Upload pending files if any
       if (pendingFiles.length > 0) {
@@ -701,6 +720,22 @@ export default function OccurrenceDetail() {
                 <p className="text-foreground">{occurrence.acao_imediata}</p>
               </div>
             )}
+
+            {/* Conduta Field (Editable) */}
+            <div>
+              <p className="text-muted-foreground mb-1">Conduta</p>
+              {isAdmin ? (
+                <textarea
+                  value={conduta}
+                  onChange={(e) => setConduta(e.target.value)}
+                  className="w-full bg-transparent border border-border rounded-md p-2 focus:border-primary outline-none text-sm"
+                  rows={3}
+                  placeholder="Descreva a conduta realizada..."
+                />
+              ) : (
+                <p className="text-foreground">{conduta || occurrence.conduta || "-"}</p>
+              )}
+            </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <p className="text-muted-foreground mb-1">Impacto Percebido</p>
@@ -763,55 +798,56 @@ export default function OccurrenceDetail() {
           </div>
         )}
 
+        {/* Signature Section (Administrative only) - Visible to all for signing */}
+        {occurrence.tipo === 'administrativa' && (
+          <div className="mb-6">
+            <SignatureSection
+              occurrence={occurrence}
+              pending={isSaving}
+              onSave={async (signatures) => {
+                setIsSaving(true);
+                try {
+                  // Save signatures and autocomplete if both present
+                  await updateOccurrence.mutateAsync({
+                    id: occurrence.id,
+                    original_table: occurrence.original_table,
+                    ...signatures,
+                    // If both signatures are being saved (or pre-existing + new), update status to 'concluida'
+                    status: 'concluida'
+                  });
+
+                  toast({
+                    title: "Assinaturas Salvas",
+                    description: "Ocorrência finalizada. Gerando PDF...",
+                  });
+
+                  // Refetch to get updated data including new signatures
+                  const { data: freshData } = await refetch();
+
+                  if (freshData) {
+                    const pdfUrl = await generateAndStorePdf(freshData);
+                    if (pdfUrl) {
+                      toast({ title: "PDF de conclusão gerado!" });
+                    }
+                  }
+
+                } catch (error) {
+                  toast({
+                    title: "Erro ao salvar",
+                    description: "Não foi possível salvar as assinaturas.",
+                    variant: "destructive"
+                  });
+                } finally {
+                  setIsSaving(false);
+                }
+              }}
+            />
+          </div>
+        )}
+
         {/* Outcome Selector (Admin only) */}
         {isAdmin && (
           <>
-            {/* Signature Section (Administrative only) */}
-            {occurrence.tipo === 'administrativa' && (
-              <div className="mb-6">
-                <SignatureSection
-                  occurrence={occurrence}
-                  pending={isSaving}
-                  onSave={async (signatures) => {
-                    setIsSaving(true);
-                    try {
-                      // Save signatures and autocomplete if both present
-                      await updateOccurrence.mutateAsync({
-                        id: occurrence.id,
-                        original_table: occurrence.original_table,
-                        ...signatures,
-                        // If both signatures are being saved (or pre-existing + new), update status to 'concluida'
-                        status: 'concluida'
-                      });
-
-                      toast({
-                        title: "Assinaturas Salvas",
-                        description: "Ocorrência finalizada. Gerando PDF...",
-                      });
-
-                      // Refetch to get updated data including new signatures
-                      const { data: freshData } = await refetch();
-
-                      if (freshData) {
-                        const pdfUrl = await generateAndStorePdf(freshData);
-                        if (pdfUrl) {
-                          toast({ title: "PDF de conclusão gerado!" });
-                        }
-                      }
-
-                    } catch (error) {
-                      toast({
-                        title: "Erro ao salvar",
-                        description: "Não foi possível salvar as assinaturas.",
-                        variant: "destructive"
-                      });
-                    } finally {
-                      setIsSaving(false);
-                    }
-                  }}
-                />
-              </div>
-            )}
 
             <div className="mb-6">
               <OutcomeSelector value={outcome} onChange={setOutcome} />
