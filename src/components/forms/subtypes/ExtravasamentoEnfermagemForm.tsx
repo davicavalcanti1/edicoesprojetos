@@ -229,13 +229,13 @@ export function ExtravasamentoEnfermagemForm({ form }: ExtravasamentoEnfermagemF
                     />
                 </div>
 
-                {/* Responsável Técnico Raio-X */}
+                {/* Responsável Técnico de Radiologia */}
                 <div className="space-y-2">
-                    <Label>Responsável Técnico Raio-X</Label>
+                    <Label>Técnico de Radiologia Responsável</Label>
                     <Input
                         placeholder="Nome do técnico"
-                        value={dados.responsavelTecnicoRaioX || ""}
-                        onChange={(e) => updateDados("responsavelTecnicoRaioX", e.target.value)}
+                        value={dados.responsavelTecnicoRadiologia || dados.responsavelTecnicoRaioX || ""}
+                        onChange={(e) => updateDados("responsavelTecnicoRadiologia", e.target.value)}
                     />
                 </div>
 

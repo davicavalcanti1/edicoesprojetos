@@ -58,6 +58,7 @@ const labelMapping: Record<string, string> = {
   medicoAvaliou: "Médico Avaliou?",
   responsavelAuxiliarEnf: "Auxiliar de Enfermagem Responsável",
   responsavelTecnicoRaioX: "Técnico de Radiologia Responsável",
+  responsavelTecnicoRadiologia: "Técnico de Radiologia Responsável",
   responsavelCoordenador: "Coordenador Responsável",
   motivoRevisao: "Motivo da Revisão",
   motivoRevisaoOutro: "Outro Motivo",
@@ -686,10 +687,10 @@ export default function OccurrenceDetail() {
               ) : (
                 <div className="space-y-4">
                   {/* Detailed Description Text */}
-                  {occurrence.descricao_detalhada && (
+                  {descricaoDetalhada && (
                     <div className="bg-muted/30 p-4 rounded-lg">
                       <p className="whitespace-pre-wrap leading-relaxed">
-                        {occurrence.descricao_detalhada}
+                        {descricaoDetalhada}
                       </p>
                     </div>
                   )}
