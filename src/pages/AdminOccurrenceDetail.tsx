@@ -139,22 +139,36 @@ export default function AdminOccurrenceDetail() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                            {/* Title/Employee Info - Added for Admin Occurrences */}
+                            {(occurrence.titulo || (occurrence as any).dados_adicionais?.employee_name) && (
+                                <div className="p-4 bg-secondary/10 border rounded-lg mb-4">
+                                    <h3 className="font-semibold text-lg text-primary">
+                                        {occurrence.titulo || "Detalhes Administrativos"}
+                                    </h3>
+                                    {(occurrence as any).dados_adicionais?.employee_name && (
+                                        <p className="text-muted-foreground">
+                                            Funcionário: <span className="font-medium text-foreground">{(occurrence as any).dados_adicionais.employee_name}</span>
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
                             <div className="grid md:grid-cols-2 gap-4">
                                 <div>
                                     <span className="text-sm text-muted-foreground">Tipo de Ocorrência</span>
-                                    <p className="font-medium capitalize">{occurrence.tipo} - {occurrence.subtipo}</p>
+                                    <p className="font-medium capitalize">{occurrence.tipo} - {occurrence.subtipo || (occurrence as any).categoria}</p>
                                 </div>
                                 <div>
                                     <span className="text-sm text-muted-foreground">Data do Registro</span>
                                     <p className="font-medium">
-                                        {occurrence.criado_em && format(new Date(occurrence.criado_em), "dd/MM/yyyy HH:mm")}
+                                        {(occurrence.criado_em || (occurrence as any).created_at) && format(new Date(occurrence.criado_em || (occurrence as any).created_at), "dd/MM/yyyy HH:mm")}
                                     </p>
                                 </div>
                             </div>
                             <div>
                                 <span className="text-sm text-muted-foreground">Descrição</span>
                                 <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed p-4 bg-muted/50 rounded-lg">
-                                    {occurrence.descricao || "Sem descrição."}
+                                    {occurrence.descricao || (occurrence as any).descricao_detalhada || "Sem descrição."}
                                 </p>
                             </div>
                         </CardContent>

@@ -47,6 +47,38 @@ const typeConfig = {
   livre: { icon: FileText, color: "text-purple-600", bgColor: "bg-purple-100" },
 };
 
+const labelMapping: Record<string, string> = {
+  volumeInjetadoMl: "Volume Injetado (ml)",
+  calibreAcesso: "Calibre do Acesso",
+  fezRx: "Realizou Raio-X?",
+  compressa: "Compressa?",
+  conduta: "Conduta",
+  medicoAvaliou: "Médico Avaliou?",
+  responsavelAuxiliarEnf: "Responsável Auxiliar Enfermagem",
+  responsavelTecnicoRaioX: "Responsável Técnico Raio-X",
+  responsavelCoordenador: "Responsável Coordenador",
+  motivoRevisao: "Motivo da Revisão",
+  motivoRevisaoOutro: "Outro Motivo",
+  tipoDiscrepancia: "Tipo de Discrepância",
+  acaoTomada: "Ação Tomada",
+  pessoasComunicadas: "Pessoas Comunicadas",
+  laudoEntregue: "Laudo Entregue?",
+  medicoResponsavel: "Médico Responsável",
+  exameModalidade: "Modalidade do Exame",
+  exameRegiao: "Região do Exame",
+  exameData: "Data do Exame",
+  tipoSonda: "Tipo de Sonda",
+  medicamento: "Medicamento",
+  viaAdministracao: "Via de Administração",
+  dispositivo: "Dispositivo"
+};
+
+const formatValue = (key: string, value: any): string => {
+  if (typeof value === 'boolean') return value ? "Sim" : "Não";
+  if (!value) return "-";
+  return String(value);
+};
+
 export default function OccurrenceDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -551,6 +583,13 @@ export default function OccurrenceDetail() {
                 })()}
               </p>
             </div>
+            {/* Hide Exam Type for Nursing/Enfermagem */}
+            {occurrence.tipo !== 'assistencial' && occurrence.tipo !== 'enfermagem' && (
+              <div>
+                <p className="text-muted-foreground">Tipo Exame / Protocolo</p>
+                <p className="font-medium">{occurrence.paciente_tipo_exame || "-"}</p>
+              </div>
+            )}
             <div>
               <p className="text-muted-foreground">Telefone</p>
               <p className="font-medium">{occurrence.paciente_telefone || "-"}</p>
@@ -597,7 +636,34 @@ export default function OccurrenceDetail() {
                   </details>
                 </div>
               ) : (
-                <FormattedDetails content={occurrence.descricao_detalhada} />
+                <div className="space-y-4">
+                  {/* Detailed Description Text */}
+                  {occurrence.descricao_detalhada && (
+                    <div className="bg-muted/30 p-4 rounded-lg">
+                      <p className="whitespace-pre-wrap leading-relaxed">
+                        {occurrence.descricao_detalhada}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Specific Fields parsed from JSONB (dados_adicionais/dados_especificos) */}
+                  {(occurrence.dados_adicionais || occurrence.dados_especificos) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                      {Object.entries(occurrence.dados_adicionais || occurrence.dados_especificos || {})
+                        .filter(([key, value]) => labelMapping[key] && value !== null && value !== "" && key !== 'descricao_detalhada') // Only show known keys
+                        .map(([key, value]) => (
+                          <div key={key} className="bg-secondary/10 p-3 rounded-md border border-secondary/20">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">
+                              {labelMapping[key] || key}
+                            </p>
+                            <p className="font-medium text-foreground">
+                              {formatValue(key, value)}
+                            </p>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
             {occurrence.acao_imediata && (

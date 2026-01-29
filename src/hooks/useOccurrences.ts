@@ -59,12 +59,13 @@ export function useOccurrences() {
         id: item.id,
         protocolo: item.protocolo,
         tipo: 'administrativa' as const,
-        subtipo: item.categoria || item.subtype, // Updated specific field
+        subtipo: item.categoria || item.subtype || item.subtipo, // Updated specifc fields
         status: item.status,
-        descricao: item.descricao,
+        descricao: item.descricao || item.descricao_detalhada, // Fix: Map description correctly
         criado_em: item.created_at || item.criado_em,
         criado_por: item.criado_por || item.user_id,
-        paciente_nome: item.paciente_nome_completo, // Direct map
+        // Fix: Employee name often stored in JSONB
+        paciente_nome: item.paciente_nome_completo || item.paciente_nome || item.dados_adicionais?.employee_name,
         paciente_id: item.paciente_id,
         original_table: 'ocorrencia_adm',
         raw_data: item
