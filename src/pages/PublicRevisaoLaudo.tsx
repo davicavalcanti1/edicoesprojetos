@@ -64,10 +64,11 @@ export default function PublicRevisaoLaudo() {
       }
 
       try {
+        // Corrected to query 'ocorrencia_laudo' which stores 'Revisão de Laudo'
         const { data, error } = await (supabase
-          .from("ocorrencia_adm")
+          .from("ocorrencia_laudo")
           .select(
-            "id, protocolo, paciente_nome_completo, paciente_id, paciente_tipo_exame, paciente_unidade_local, paciente_data_hora_evento, paciente_sexo, paciente_telefone, descricao_detalhada, mensagem_admin_medico, mensagem_medico, status, medico_destino, encaminhada_em, finalizada_em"
+            "id, protocolo, paciente_nome, paciente_id, exame_tipo, exame_unidade, exame_data, dados_adicionais, motivo_revisao, mensagem_admin_medico, mensagem_medico, status, medico_responsavel_laudo, encaminhada_em, finalizada_em"
           )
           .eq("public_token", token)
           .maybeSingle() as any);
@@ -78,16 +79,38 @@ export default function PublicRevisaoLaudo() {
         } else if (!data) {
           setIsInvalid(true);
         } else {
-          setOccurrence(data as PublicOccurrence);
+          // Map DB fields to Component State
+          const dadosAdicionais = data.dados_adicionais || {};
+
+          setOccurrence({
+            id: data.id,
+            protocolo: data.protocolo,
+            paciente_nome_completo: data.paciente_nome,
+            paciente_id: data.paciente_id,
+            paciente_tipo_exame: data.exame_tipo,
+            paciente_unidade_local: data.exame_unidade || dadosAdicionais.unidade,
+            paciente_data_hora_evento: data.exame_data,
+            descricao_detalhada: data.motivo_revisao, // Map motivo to description
+            mensagem_admin_medico: data.mensagem_admin_medico,
+            mensagem_medico: data.mensagem_medico,
+            status: data.status,
+            medico_destino: data.medico_responsavel_laudo,
+            encaminhada_em: data.encaminhada_em,
+            finalizada_em: data.finalizada_em,
+            paciente_sexo: dadosAdicionais.sexo || "Não informado", // Fetch from JSONB
+            paciente_telefone: dadosAdicionais.telefone || dadosAdicionais.paciente_telefone || "Não informado"
+          } as PublicOccurrence);
+
           setMensagemMedico(data.mensagem_medico || "");
 
           // Fetch attachments with signed URLs from new polymorphic table
+          // Note: origin_table must be 'ocorrencia_laudo' for these
           const { data: attachmentsData } = await supabase
             .from("attachments")
             .select("*")
             .eq("origin_id", data.id)
-            .eq("origin_table", "ocorrencia_adm")
-            .order("uploaded_at", { ascending: true }); // Note: updated_at/uploaded_at column check
+            .eq("origin_table", "ocorrencia_laudo")
+            .order("uploaded_at", { ascending: true });
 
           if (attachmentsData && attachmentsData.length > 0) {
             // Generate signed URLs for each attachment
@@ -133,7 +156,7 @@ export default function PublicRevisaoLaudo() {
     try {
       // 1. Update Supabase (Message only)
       const { error } = await supabase
-        .from("ocorrencia_adm")
+        .from("ocorrencia_laudo")
         .update({ mensagem_medico: mensagemMedico })
         .eq("public_token", token);
 
@@ -206,7 +229,7 @@ export default function PublicRevisaoLaudo() {
 
       // 1. Update Supabase (Message + Status)
       const { error } = await supabase
-        .from("ocorrencia_adm")
+        .from("ocorrencia_laudo")
         .update({
           mensagem_medico: mensagemMedico,
           status: "aguardando_triagem",
@@ -284,7 +307,7 @@ export default function PublicRevisaoLaudo() {
 
       // 1. Update Supabase (Message + Status)
       const { error } = await supabase
-        .from("ocorrencia_adm")
+        .from("ocorrencia_laudo")
         .update({
           mensagem_medico: automaticMessage,
           status: "aguardando_triagem",
