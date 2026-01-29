@@ -61,6 +61,17 @@ const labelMapping: Record<string, string> = {
   responsavelTecnicoRaioX: "Técnico de Radiologia Responsável",
   responsavelTecnicoRadiologia: "Técnico de Radiologia Responsável",
   responsavelCoordenador: "Coordenador Responsável",
+  // Snake Case Keys
+  medico_avaliou: "Médico Avaliou?",
+  fez_rx: "Fez Raio-X?",
+  fez_compressa: "Fez Compressa?",
+  volume_injetado_ml: "Volume Injetado (ml)",
+  calibre_acesso: "Calibre do Acesso",
+  responsavel_auxiliar_enf: "Responsável (Técnico/Auxiliar)",
+  responsavel_tecnico_raio_x: "Técnico de Radiologia Responsável",
+  responsavel_tecnico_radiologia: "Técnico de Radiologia Responsável",
+  responsavel_coordenador: "Coordenador Responsável",
+
   // UPPERCASE Keys (from DB raw data)
   MEDICOAVALIOU: "Médico Avaliou?",
   FEZRX: "Fez Raio-X?",
@@ -414,9 +425,13 @@ export default function OccurrenceDetail() {
           const [day, month, year] = pacienteDataNascimento.split("/");
           return `${year}-${month}-${day}`;
         })(),
-        impacto_percebido: impactoPercebido,
-        medico_destino: medicoDestino,
       };
+
+      // Only include fields if supported by table schema
+      if (!isNursing) {
+        updatePayload.impacto_percebido = impactoPercebido;
+        updatePayload.medico_destino = medicoDestino;
+      }
 
       // Specific handling for Nursing (ocorrencia_enf)
       if (occurrence.original_table === 'ocorrencia_enf') {
@@ -820,34 +835,37 @@ export default function OccurrenceDetail() {
               <p className="text-foreground">{conduta || occurrence.conduta || "-"}</p>
             )}
           </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-muted-foreground mb-1">Impacto Percebido</p>
-              {isAdmin ? (
-                <input
-                  type="text"
-                  value={impactoPercebido}
-                  onChange={(e) => setImpactoPercebido(e.target.value)}
-                  className="w-full bg-transparent border-b border-border focus:border-primary outline-none py-0.5"
-                />
-              ) : (
-                <p className="text-foreground">{occurrence.impacto_percebido || "-"}</p>
-              )}
+
+          {!isNursing && (
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-muted-foreground mb-1">Impacto Percebido</p>
+                {isAdmin ? (
+                  <input
+                    type="text"
+                    value={impactoPercebido}
+                    onChange={(e) => setImpactoPercebido(e.target.value)}
+                    className="w-full bg-transparent border-b border-border focus:border-primary outline-none py-0.5"
+                  />
+                ) : (
+                  <p className="text-foreground">{occurrence.impacto_percebido || "-"}</p>
+                )}
+              </div>
+              <div>
+                <p className="text-muted-foreground mb-1">Médico Responsável</p>
+                {isAdmin ? (
+                  <input
+                    type="text"
+                    value={medicoDestino}
+                    onChange={(e) => setMedicoDestino(e.target.value)}
+                    className="w-full bg-transparent border-b border-border focus:border-primary outline-none py-0.5"
+                  />
+                ) : (
+                  <p className="text-foreground">{occurrence.medico_destino || "-"}</p>
+                )}
+              </div>
             </div>
-            <div>
-              <p className="text-muted-foreground mb-1">Médico Responsável</p>
-              {isAdmin ? (
-                <input
-                  type="text"
-                  value={medicoDestino}
-                  onChange={(e) => setMedicoDestino(e.target.value)}
-                  className="w-full bg-transparent border-b border-border focus:border-primary outline-none py-0.5"
-                />
-              ) : (
-                <p className="text-foreground">{occurrence.medico_destino || "-"}</p>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
