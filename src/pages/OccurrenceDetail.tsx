@@ -18,6 +18,7 @@ import { SendToDoctorModal } from "@/components/occurrence/SendToDoctorModal";
 import { DoctorMessageSection } from "@/components/occurrence/DoctorMessageSection";
 import { AttachmentsSection } from "@/components/occurrence/AttachmentsSection";
 import { AttachmentUpload, PendingFile } from "@/components/attachments/AttachmentUpload";
+import { SignatureSection } from "@/components/occurrence/SignatureSection";
 import { useToast } from "@/hooks/use-toast";
 import { generateAndStorePdf } from "@/lib/pdf/generate-and-store-pdf";
 import { useAttachmentsWithSignedUrls, useUploadAttachments } from "@/hooks/useAttachments";
@@ -277,6 +278,23 @@ export default function OccurrenceDetail() {
       id: occurrence.id,
       status: newStatus,
       original_table: occurrence.original_table, // Fix: Pass required table
+    }, {
+      onSuccess: async () => {
+        if (newStatus === 'concluida') {
+          // We need the latest data for the PDF, so refetch first or just pass current with new status
+          // Refetching is safer to ensure we have any backend triggers resolved
+          const { data: freshData } = await refetch();
+          if (freshData) {
+            toast({ title: "Gerando PDF de conclusão...", description: "Aguarde..." });
+            const url = await generateAndStorePdf(freshData);
+            if (url) {
+              toast({ title: "PDF gerado e salvo com sucesso!" });
+            } else {
+              toast({ title: "Erro ao gerar PDF", variant: "destructive" });
+            }
+          }
+        }
+      }
     });
   };
 
@@ -370,7 +388,18 @@ export default function OccurrenceDetail() {
         description: "As informações da ocorrência foram atualizadas com sucesso.",
       });
 
-      refetch();
+      const { data: updatedData } = await refetch();
+
+      // If occurrence is Concluded, REGENERATE PDF to include new Outcome/CAPA
+      if (occurrence.status === 'concluida' && updatedData) {
+        toast({ title: "Regerando PDF com novos dados..." });
+        await generateAndStorePdf(updatedData);
+        toast({ title: "PDF atualizado!" });
+      } else if (occurrence.status === 'concluida' && !updatedData && occurrence) {
+        // Fallback if refetch returns nothing/undefined but we have local state
+        await generateAndStorePdf({ ...occurrence, ...outcome, ...capas } as any);
+      }
+
     } catch (error) {
       toast({
         title: "Erro ao salvar",
@@ -737,6 +766,53 @@ export default function OccurrenceDetail() {
         {/* Outcome Selector (Admin only) */}
         {isAdmin && (
           <>
+            {/* Signature Section (Administrative only) */}
+            {occurrence.tipo === 'administrativa' && (
+              <div className="mb-6">
+                <SignatureSection
+                  occurrence={occurrence}
+                  pending={isSaving}
+                  onSave={async (signatures) => {
+                    setIsSaving(true);
+                    try {
+                      // Save signatures and autocomplete if both present
+                      await updateOccurrence.mutateAsync({
+                        id: occurrence.id,
+                        original_table: occurrence.original_table,
+                        ...signatures,
+                        // If both signatures are being saved (or pre-existing + new), update status to 'concluida'
+                        status: 'concluida'
+                      });
+
+                      toast({
+                        title: "Assinaturas Salvas",
+                        description: "Ocorrência finalizada. Gerando PDF...",
+                      });
+
+                      // Refetch to get updated data including new signatures
+                      const { data: freshData } = await refetch();
+
+                      if (freshData) {
+                        const pdfUrl = await generateAndStorePdf(freshData);
+                        if (pdfUrl) {
+                          toast({ title: "PDF de conclusão gerado!" });
+                        }
+                      }
+
+                    } catch (error) {
+                      toast({
+                        title: "Erro ao salvar",
+                        description: "Não foi possível salvar as assinaturas.",
+                        variant: "destructive"
+                      });
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
+                />
+              </div>
+            )}
+
             <div className="mb-6">
               <OutcomeSelector value={outcome} onChange={setOutcome} />
             </div>
