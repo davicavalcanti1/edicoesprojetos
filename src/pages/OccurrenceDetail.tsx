@@ -214,27 +214,33 @@ export default function OccurrenceDetail() {
     }
   }, [occurrence]);
 
-  const isRevisaoLaudo = occurrence?.subtipo === "revisao_exame";
-  const isNursing = occurrence?.tipo === "enfermagem" || occurrence?.tipo === "assistencial";
-  const isAdm = occurrence?.tipo === "administrativa";
+  const isRevisaoLaudo = occurrence?.subtipo?.toLowerCase() === "revisao_exame" || occurrence?.tipo?.toLowerCase() === "revisao_exame";
+  const isNursing = occurrence?.tipo?.toLowerCase() === "enfermagem" || occurrence?.tipo?.toLowerCase() === "assistencial";
+  const isAdm = occurrence?.tipo?.toLowerCase() === "administrativa";
 
   // Define custom transitions based on type
   const getTransitions = (status: OccurrenceStatus): OccurrenceStatus[] => {
+    const s = status?.toLowerCase() as OccurrenceStatus;
     // Nursing Flow: Registrada -> Em Análise -> Concluída
     if (isNursing) {
-      if (status === 'registrada') return ['em_analise'];
-      if (status === 'em_analise') return ['concluida'];
-      if (status === 'concluida') return [];
+      if (s === 'registrada') return ['em_analise'];
+      if (s === 'em_analise') return ['concluida'];
+      if (s === 'concluida') return [];
       return ['em_analise']; // fallback
     }
     // Adm Flow: Pendente/Registrada -> Aguardando Assinatura -> Concluída
     if (isAdm) {
-      if (status === 'registrada' || status === 'pendente') return ['acao_em_andamento']; // Mapping "Aguardando Assinatura" to "Ação em Andamento" for now or use generic
-      if (status === 'acao_em_andamento') return ['concluida'];
-      return [];
+      if (s === 'registrada' || s === 'pendente') return ['acao_em_andamento'];
+      if (s === 'acao_em_andamento') return ['concluida'];
+      return ['concluida'];
     }
-    // Default
-    return statusTransitions[status] || [];
+    // Revisao Laudo details
+    if (isRevisaoLaudo) {
+      // Keep standard or custom? User said "corrigir status inside occurrence"
+      return statusTransitions[s] || [];
+    }
+
+    return statusTransitions[s] || [];
   };
   const transformToOccurrence = (): Partial<Occurrence> | undefined => {
     if (!occurrence) return undefined;
