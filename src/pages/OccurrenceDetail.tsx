@@ -61,6 +61,17 @@ const labelMapping: Record<string, string> = {
   responsavelTecnicoRaioX: "Técnico de Radiologia Responsável",
   responsavelTecnicoRadiologia: "Técnico de Radiologia Responsável",
   responsavelCoordenador: "Coordenador Responsável",
+  // UPPERCASE Keys (from DB raw data)
+  MEDICOAVALIOU: "Médico Avaliou?",
+  FEZRX: "Fez Raio-X?",
+  COMPRESSA: "Fez Compressa?",
+  VOLUMEINJETADOML: "Volume Injetado (ml)",
+  CALIBREACESSO: "Calibre do Acesso",
+  RESPONSAVELAUXILIARENF: "Responsável (Técnico/Auxiliar)",
+  RESPONSAVELTECNICORAIOX: "Técnico de Radiologia Responsável",
+  RESPONSAVELTECNICORADIOLOGIA: "Técnico de Radiologia Responsável",
+  RESPONSAVELCOORDENADOR: "Coordenador Responsável",
+
   motivoRevisao: "Motivo da Revisão",
   motivoRevisaoOutro: "Outro Motivo",
   tipoDiscrepancia: "Tipo de Discrepância",
@@ -491,148 +502,141 @@ export default function OccurrenceDetail() {
                 <h1 className="text-xl font-bold font-mono text-foreground">
                   {occurrence.protocolo}
                 </h1>
+                {/* Visual Subtype Label */}
+                {occurrence.subtipo && (
+                  <p className="text-xs font-medium text-muted-foreground mt-0.5 opacity-80 uppercase tracking-widest">
+                    {subtypeLabels[occurrence.subtipo] || (occurrence.subtipo.replace(/_/g, " "))}
+                  </p>
+                )}
                 <div className="flex items-center gap-2 mt-2">
                   <span
                     className={`px-2.5 py-1 text-xs font-medium rounded-full ${statusConfig[occurrence.status as OccurrenceStatus]?.bgColor || "bg-gray-100"} ${statusConfig[occurrence.status as OccurrenceStatus]?.color || "text-gray-700"}`}
                   >
                     {statusConfig[occurrence.status as OccurrenceStatus]?.label || occurrence.status}
                   </span>
-                  {occurrence.triagem && <TriageBadge triage={occurrence.triagem as TriageClassification} size="sm" />}
+                  {occurrence.triagem && !isNursing && <TriageBadge triage={occurrence.triagem as TriageClassification} size="sm" />}
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="flex flex-col items-end gap-2">
-              <div className="text-sm text-muted-foreground text-right">
-                <p>
-                  Registrado em{" "}
-                  {format(new Date(occurrence.criado_em), "dd/MM/yyyy 'às' HH:mm", {
-                    locale: ptBR,
-                  })}
-                </p>
-                <p>por {occurrence.criador_nome || "Usuário"}</p>
-              </div>
-
-              <div className="flex gap-2">
-                {isRevisaoLaudo && isAdmin && occurrence.triagem && occurrence.status !== "concluida" && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="bg-primary hover:bg-primary/90"
-                    onClick={() => setIsSendToDoctorOpen(true)}
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    {occurrence.encaminhada_em ? "Reenviar para Médico" : "Encaminhar para Médico"}
-                  </Button>
-                )}
-
-                {isAdmin && occurrence.status === "concluida" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      downloadOccurrencePDF(transformToOccurrence() as any);
-                    }}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Exportar PDF
-                  </Button>
-                )}
-              </div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="text-sm text-muted-foreground text-right">
+              <p>
+                Registrado em{" "}
+                {format(new Date(occurrence.criado_em), "dd/MM/yyyy 'às' HH:mm", {
+                  locale: ptBR,
+                })}
+              </p>
+              <p>por {occurrence.criador_nome || "Usuário"}</p>
             </div>
-          </div>
-        </div>
 
-        {/* Status Flow */}
-        <div className="mb-6">
-          <StatusFlow
-            currentStatus={occurrence.status as OccurrenceStatus}
-            onStatusChange={handleStatusChange}
-            isAdmin={isAdmin}
-          // Pass custom transitions if the component supports it, otherwise we might need to modify StatusFlow.
-          // Assuming StatusFlow uses the global statusTransitions, we can't easily override it via props unless modified.
-          // If StatusFlow doesn't accept transitions prop, we must accept the global behavior OR modify StatusFlow.
-          // For this specific task, I'll rely on global `statusTransitions` modifications later or just accept standard flow if I can't change it.
-          // Wait, I can update the `statusTransitions` import usage if I modify the component file, but let's try to pass allowed transitions if possible.
-          // Checking StatusFlow usage... it likely imports statusTransitions directly.
-          // Let's assume standard flow for now but I'll add the UI constraint updates below.
-          />
-        </div>
+            <div className="flex gap-2">
+              {isRevisaoLaudo && isAdmin && occurrence.triagem && occurrence.status !== "concluida" && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="bg-primary hover:bg-primary/90"
+                  onClick={() => setIsSendToDoctorOpen(true)}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {occurrence.encaminhada_em ? "Reenviar para Médico" : "Encaminhar para Médico"}
+                </Button>
+              )}
 
-        {/* Triage Section (Admin only) */}
-        {isAdmin && !occurrence.triagem && (
-          <div className="rounded-xl border-2 border-warning/30 bg-warning/5 p-6 mb-6">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <h3 className="font-semibold text-foreground">Triagem Pendente</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Esta ocorrência ainda não foi triada. Realize a classificação de gravidade.
-                </p>
-              </div>
-              <Button onClick={() => setIsTriageOpen(true)}>Realizar Triagem</Button>
-            </div>
-          </div>
-        )}
-
-        {/* Patient Data Summary */}
-        <div className="rounded-xl border border-border bg-white/60 backdrop-blur-xl border-white/40 shadow-xl p-6 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <User className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold text-foreground">Dados do Paciente</h3>
-          </div>
-          <div className="grid gap-4 md:grid-cols-3 text-sm">
-            <div>
-              <p className="text-muted-foreground">Nome</p>
-              {isAdmin ? (
-                <input
-                  type="text"
-                  value={pacienteNome}
-                  onChange={(e) => setPacienteNome(e.target.value)}
-                  className="w-full bg-transparent border-b border-border focus:border-primary outline-none py-0.5"
-                />
-              ) : (
-                <p className="font-medium">{occurrence.paciente_nome_completo || "-"}</p>
+              {isAdmin && occurrence.status === "concluida" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    downloadOccurrencePDF(transformToOccurrence() as any);
+                  }}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Exportar PDF
+                </Button>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Status Flow */}
+      <div className="mb-6">
+        <StatusFlow
+          currentStatus={occurrence.status as OccurrenceStatus}
+          onStatusChange={handleStatusChange}
+          isAdmin={isAdmin}
+        // Pass custom transitions if the component supports it, otherwise we might need to modify StatusFlow.
+        // Assuming StatusFlow uses the global statusTransitions, we can't easily override it via props unless modified.
+        // If StatusFlow doesn't accept transitions prop, we must accept the global behavior OR modify StatusFlow.
+        // For this specific task, I'll rely on global `statusTransitions` modifications later or just accept standard flow if I can't change it.
+        // Wait, I can update the `statusTransitions` import usage if I modify the component file, but let's try to pass allowed transitions if possible.
+        // Checking StatusFlow usage... it likely imports statusTransitions directly.
+        // Let's assume standard flow for now but I'll add the UI constraint updates below.
+        />
+      </div>
+
+      {/* Triage Section (Admin only) - Hidden for Nursing */}
+      {isAdmin && !occurrence.triagem && !isNursing && (
+        <div className="rounded-xl border-2 border-warning/30 bg-warning/5 p-6 mb-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-foreground">Triagem Pendente</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Esta ocorrência ainda não foi triada. Realize a classificação de gravidade.
+              </p>
+            </div>
+            <Button onClick={() => setIsTriageOpen(true)}>Realizar Triagem</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Patient Data Summary */}
+      <div className="rounded-xl border border-border bg-white/60 backdrop-blur-xl border-white/40 shadow-xl p-6 mb-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <User className="h-5 w-5 text-primary" />
+          </div>
+          <h3 className="font-semibold text-foreground text-lg">Dados do Paciente</h3>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 text-sm">
+          <div className="md:col-span-2">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Nome Completo</p>
+            {isAdmin ? (
+              <input
+                type="text"
+                value={pacienteNome}
+                onChange={(e) => setPacienteNome(e.target.value)}
+                className="w-full bg-transparent border-b-2 border-border focus:border-primary outline-none py-1 transition-colors font-medium text-lg"
+                placeholder="Nome do Paciente"
+              />
+            ) : (
+              <p className="font-medium text-lg text-foreground">{occurrence.paciente_nome_completo || "-"}</p>
+            )}
           </div>
 
           {/* ID/Prontuario - Hide for Nursing */}
           {!isNursing && (
             <div>
-              <p className="text-muted-foreground">ID / Prontuário</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">ID / Prontuário</p>
               {isAdmin ? (
                 <input
                   type="text"
                   value={pacienteId}
                   onChange={(e) => setPacienteId(e.target.value)}
-                  className="w-full bg-transparent border-b border-border focus:border-primary outline-none py-0.5"
+                  className="w-full bg-transparent border-b border-border focus:border-primary outline-none py-1"
                 />
               ) : (
-                <p className="font-medium">{occurrence.paciente_id || "-"}</p>
-              )}
-            </div>
-          )}
-
-          {/* Unidade - Hide for Nursing */}
-          {!isNursing && (
-            <div>
-              <p className="text-muted-foreground">Unidade</p>
-              {isAdmin ? (
-                <input
-                  type="text"
-                  value={pacienteUnidade}
-                  onChange={(e) => setPacienteUnidade(e.target.value)}
-                  className="w-full bg-transparent border-b border-border focus:border-primary outline-none py-0.5"
-                />
-              ) : (
-                <p className="font-medium">{occurrence.paciente_unidade_local || "-"}</p>
+                <p className="font-medium text-base">{occurrence.paciente_id || "-"}</p>
               )}
             </div>
           )}
 
           <div>
-            <p className="text-muted-foreground">Data de Nascimento</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Data de Nascimento</p>
             {isAdmin ? (
               <input
                 type="text"
@@ -646,17 +650,17 @@ export default function OccurrenceDetail() {
                   setPacienteDataNascimento(formatted);
                 }}
                 maxLength={10}
-                className="w-full bg-transparent border-b border-border focus:border-primary outline-none py-0.5"
+                className="w-full bg-transparent border-b border-border focus:border-primary outline-none py-1 font-medium"
               />
             ) : (
-              <p className="font-medium">
+              <p className="font-medium text-base">
                 {(() => {
                   try {
                     if (!occurrence.paciente_data_nascimento) return "-";
                     // Check if it's already in DD/MM/YYYY format to avoid re-formatting or invalid Date parsing
                     if (occurrence.paciente_data_nascimento.includes('/')) return occurrence.paciente_data_nascimento;
 
-                    return format(new Date(occurrence.paciente_data_nascimento + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR });
+                    return format(new Date(occurrence.paciente_data_nascimento.includes('T') ? occurrence.paciente_data_nascimento : occurrence.paciente_data_nascimento + 'T00:00:00'), "dd/MM/yyyy", { locale: ptBR });
                   } catch (e) {
                     return occurrence.paciente_data_nascimento || "-";
                   }
@@ -665,43 +669,8 @@ export default function OccurrenceDetail() {
             )}
           </div>
 
-          {/* Event Date - Hide for Nursing */}
-          {/* Event Date - Handle both Nursing (hide) and Laudo/Admin (show correct field) */}
-          {!isNursing && (
-            <div>
-              <p className="text-muted-foreground">Data/Hora do Evento</p>
-              <p className="font-medium">
-                {(() => {
-                  try {
-                    // Check for exam date (Laudo) or event date (others)
-                    const dateVal = occurrence.paciente_data_hora_evento || occurrence.exame_data;
-
-                    if (!dateVal) return "-";
-
-                    return format(new Date(dateVal), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-                  } catch (e) {
-                    return occurrence.paciente_data_hora_evento || occurrence.exame_data || "-";
-                  }
-                })()}
-              </p>
-            </div>
-          )}
-          {/* Hide Exam Type for Nursing/Enfermagem */}
-          {/* Hide Exam Type for Nursing, show for Laudo/Others */}
-          {!isNursing && (
-            <div>
-              <p className="text-muted-foreground">Tipo Exame / Protocolo</p>
-              <p className="font-medium">
-                {occurrence.paciente_tipo_exame || occurrence.exame_tipo || "-"}
-              </p>
-            </div>
-          )}
           <div>
-            <p className="text-muted-foreground">Telefone</p>
-            <p className="font-medium">{occurrence.paciente_telefone || "-"}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Sexo</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Sexo</p>
             {isAdmin ? (
               <select
                 value={pacienteSexo}
@@ -713,11 +682,61 @@ export default function OccurrenceDetail() {
                 <option value="Feminino">Feminino</option>
               </select>
             ) : (
-              <p className="font-medium">{occurrence.paciente_sexo || "-"}</p>
+              <p className="font-medium text-base">{occurrence.paciente_sexo || "-"}</p>
             )}
           </div>
+
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Telefone</p>
+            <p className="font-medium text-base">{occurrence.paciente_telefone || "-"}</p>
+          </div>
+
+          {!isNursing && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Unidade</p>
+              {isAdmin ? (
+                <input
+                  type="text"
+                  value={pacienteUnidade}
+                  onChange={(e) => setPacienteUnidade(e.target.value)}
+                  className="w-full bg-transparent border-b border-border focus:border-primary outline-none py-1"
+                />
+              ) : (
+                <p className="font-medium text-base">{occurrence.paciente_unidade_local || "-"}</p>
+              )}
+            </div>
+          )}
+
+          {!isNursing && (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Data do Evento</p>
+              <p className="font-medium text-base">
+                {(() => {
+                  try {
+                    const dateVal = occurrence.paciente_data_hora_evento || occurrence.exame_data;
+                    if (!dateVal) return "-";
+                    return format(new Date(dateVal), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+                  } catch (e) {
+                    return occurrence.paciente_data_hora_evento || occurrence.exame_data || "-";
+                  }
+                })()}
+              </p>
+            </div>
+          )}
+
+          {!isNursing && (
+            <div className="md:col-span-2">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Tipo Exame / Protocolo</p>
+              <p className="font-medium text-base">
+                {occurrence.paciente_tipo_exame || occurrence.exame_tipo || "-"}
+              </p>
+            </div>
+          )}
+
         </div>
       </div>
+
+
 
       {/* Occurrence Details */}
       <div className="rounded-xl border border-border bg-white/60 backdrop-blur-xl border-white/40 shadow-xl p-6 mb-6">
@@ -833,14 +852,16 @@ export default function OccurrenceDetail() {
       </div>
 
       {/* Doctor Message Section (for Revisão de Laudo) */}
-      {isRevisaoLaudo && occurrence.encaminhada_em && (
-        <DoctorMessageSection
-          mensagemMedico={occurrence.mensagem_medico}
-          medicoDestino={occurrence.medico_destino}
-          encaminhadaEm={occurrence.encaminhada_em}
-          finalizadaEm={occurrence.finalizada_em}
-        />
-      )}
+      {
+        isRevisaoLaudo && occurrence.encaminhada_em && (
+          <DoctorMessageSection
+            mensagemMedico={occurrence.mensagem_medico}
+            medicoDestino={occurrence.medico_destino}
+            encaminhadaEm={occurrence.encaminhada_em}
+            finalizadaEm={occurrence.finalizada_em}
+          />
+        )
+      }
 
       {/* Attachments Section (only for Revisão de Exame) */}
       <AttachmentsSection
@@ -849,96 +870,102 @@ export default function OccurrenceDetail() {
       />
 
       {/* Upload New Attachments (Admin only) */}
-      {isAdmin && (
-        <div className="rounded-xl border border-border bg-white/60 backdrop-blur-xl border-white/40 shadow-xl p-6 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Paperclip className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold text-foreground">Adicionar Novos Anexos</h3>
+      {
+        isAdmin && (
+          <div className="rounded-xl border border-border bg-white/60 backdrop-blur-xl border-white/40 shadow-xl p-6 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Paperclip className="h-5 w-5 text-primary" />
+              <h3 className="font-semibold text-foreground">Adicionar Novos Anexos</h3>
+            </div>
+            <AttachmentUpload
+              files={pendingFiles}
+              onChange={setPendingFiles}
+              maxFiles={10}
+            />
           </div>
-          <AttachmentUpload
-            files={pendingFiles}
-            onChange={setPendingFiles}
-            maxFiles={10}
-          />
-        </div>
-      )}
+        )
+      }
 
       {/* Signature Section (Administrative only) - Visible to all for signing */}
-      {occurrence.tipo === 'administrativa' && (
-        <div className="mb-6">
-          <SignatureSection
-            occurrence={occurrence}
-            pending={isSaving}
-            onSave={async (signatures) => {
-              setIsSaving(true);
-              try {
-                // Save signatures and autocomplete if both present
-                await updateOccurrence.mutateAsync({
-                  id: occurrence.id,
-                  original_table: occurrence.original_table,
-                  ...signatures,
-                  // If both signatures are being saved (or pre-existing + new), update status to 'concluida'
-                  status: 'concluida'
-                });
+      {
+        occurrence.tipo === 'administrativa' && (
+          <div className="mb-6">
+            <SignatureSection
+              occurrence={occurrence}
+              pending={isSaving}
+              onSave={async (signatures) => {
+                setIsSaving(true);
+                try {
+                  // Save signatures and autocomplete if both present
+                  await updateOccurrence.mutateAsync({
+                    id: occurrence.id,
+                    original_table: occurrence.original_table,
+                    ...signatures,
+                    // If both signatures are being saved (or pre-existing + new), update status to 'concluida'
+                    status: 'concluida'
+                  });
 
-                toast({
-                  title: "Assinaturas Salvas",
-                  description: "Ocorrência finalizada. Gerando PDF...",
-                });
+                  toast({
+                    title: "Assinaturas Salvas",
+                    description: "Ocorrência finalizada. Gerando PDF...",
+                  });
 
-                // Refetch to get updated data including new signatures
-                const { data: freshData } = await refetch();
+                  // Refetch to get updated data including new signatures
+                  const { data: freshData } = await refetch();
 
-                if (freshData) {
-                  const pdfUrl = await generateAndStorePdf(freshData);
-                  if (pdfUrl) {
-                    toast({ title: "PDF de conclusão gerado!" });
+                  if (freshData) {
+                    const pdfUrl = await generateAndStorePdf(freshData);
+                    if (pdfUrl) {
+                      toast({ title: "PDF de conclusão gerado!" });
+                    }
                   }
-                }
 
-              } catch (error) {
-                toast({
-                  title: "Erro ao salvar",
-                  description: "Não foi possível salvar as assinaturas.",
-                  variant: "destructive"
-                });
-              } finally {
-                setIsSaving(false);
-              }
-            }}
-          />
-        </div>
-      )}
+                } catch (error) {
+                  toast({
+                    title: "Erro ao salvar",
+                    description: "Não foi possível salvar as assinaturas.",
+                    variant: "destructive"
+                  });
+                } finally {
+                  setIsSaving(false);
+                }
+              }}
+            />
+          </div>
+        )
+      }
 
       {/* Outcome Selector (Admin only) - Hidden for Nursing and Laudo */}
-      {isAdmin && !isNursing && !isRevisaoLaudo && (
-        <>
-          <div className="mb-6">
-            <OutcomeSelector value={outcome} onChange={setOutcome} />
-          </div>
-
-          {/* External Notification Form */}
-          {showExternalNotification && (
+      {
+        isAdmin && !isNursing && !isRevisaoLaudo && (
+          <>
             <div className="mb-6">
-              <ExternalNotificationForm
-                value={externalNotification}
-                onChange={setExternalNotification}
-              />
+              <OutcomeSelector value={outcome} onChange={setOutcome} />
             </div>
-          )}
 
-          {/* CAPA Form */}
-          {showCapa && (
-            <div className="mb-6">
-              <CAPAForm
-                value={capas}
-                onChange={setCapas}
-                triggerOutcomes={capaOutcomes}
-              />
-            </div>
-          )}
-        </>
-      )}
+            {/* External Notification Form */}
+            {showExternalNotification && (
+              <div className="mb-6">
+                <ExternalNotificationForm
+                  value={externalNotification}
+                  onChange={setExternalNotification}
+                />
+              </div>
+            )}
+
+            {/* CAPA Form */}
+            {showCapa && (
+              <div className="mb-6">
+                <CAPAForm
+                  value={capas}
+                  onChange={setCapas}
+                  triggerOutcomes={capaOutcomes}
+                />
+              </div>
+            )}
+          </>
+        )
+      }
 
       {/* Actions */}
       <div className="flex justify-end gap-3 pt-4 border-t border-border">
@@ -978,21 +1005,24 @@ export default function OccurrenceDetail() {
         */}
 
       {/* Send to Doctor Modal (for Revisão de Laudo) */}
-      {isRevisaoLaudo && (
-        <SendToDoctorModal
-          open={isSendToDoctorOpen}
-          onOpenChange={setIsSendToDoctorOpen}
-          occurrenceId={occurrence.id}
-          protocolo={occurrence.protocolo}
-          pacienteNome={occurrence.paciente_nome_completo}
-          pacienteTipoExame={occurrence.paciente_tipo_exame}
-          pacienteUnidade={occurrence.paciente_unidade_local}
-          pacienteDataHoraEvento={occurrence.paciente_data_hora_evento}
-          initialMedicoNome={occurrence.medico_destino}
-          initialMensagem={occurrence.mensagem_admin_medico}
-          onSuccess={handleDoctorForwardSuccess}
-        />
-      )}
-    </MainLayout>
+      {
+        isRevisaoLaudo && (
+          <SendToDoctorModal
+            open={isSendToDoctorOpen}
+            onOpenChange={setIsSendToDoctorOpen}
+            occurrenceId={occurrence.id}
+            protocolo={occurrence.protocolo}
+            pacienteNome={occurrence.paciente_nome_completo}
+            pacienteTipoExame={occurrence.paciente_tipo_exame}
+            pacienteUnidade={occurrence.paciente_unidade_local}
+            pacienteDataHoraEvento={occurrence.paciente_data_hora_evento}
+            initialMedicoNome={occurrence.medico_destino}
+            initialMensagem={occurrence.mensagem_admin_medico}
+            onSuccess={handleDoctorForwardSuccess}
+          />
+        )
+      }
+
+    </MainLayout >
   );
 }
