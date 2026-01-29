@@ -10,23 +10,33 @@ interface MedicalReviewDetailsProps {
 }
 
 export function MedicalReviewDetails({ occurrence }: MedicalReviewDetailsProps) {
-    // Parse dados_especificos if it's a string, otherwise use it as is
-    let details: any = {};
+    // Parse dados_especificos/adicionais
+    let extraDetails: any = {};
+    const rawDetails = occurrence.dados_adicionais || occurrence.dados_especificos || {};
+
     try {
-        if (typeof occurrence.dados_especificos === 'string') {
-            details = JSON.parse(occurrence.dados_especificos);
+        if (typeof rawDetails === 'string') {
+            extraDetails = JSON.parse(rawDetails);
         } else {
-            details = occurrence.dados_especificos || {};
+            extraDetails = rawDetails;
         }
     } catch (e) {
-        console.error("Error parsing dados_especificos", e);
-        // Fallback to description if it's JSON
-        try {
-            if (typeof occurrence.description === 'string' && occurrence.description.startsWith('{')) {
-                details = JSON.parse(occurrence.description);
-            }
-        } catch (e2) { }
+        console.error("Error parsing details", e);
     }
+
+    const displayData = {
+        exameModalidade: occurrence.paciente_tipo_exame || occurrence.exame_tipo || extraDetails.exameModalidade,
+        exameRegiao: occurrence.exame_regiao || extraDetails.exameRegiao,
+        exameData: occurrence.exame_data || occurrence.paciente_data_hora_evento || extraDetails.exameData,
+        medicoResponsavel: occurrence.medico_responsavel_laudo || occurrence.medico_destino || extraDetails.medicoResponsavel || extraDetails.medicoResponsavelId,
+        laudoEntregue: (occurrence.laudo_entregue !== undefined && occurrence.laudo_entregue !== null) ? (occurrence.laudo_entregue ? "Sim" : "Não") : (extraDetails.laudoEntregue || "-"),
+        motivoRevisao: occurrence.motivo_revisao || extraDetails.motivoRevisao,
+        tipoDiscrepancia: occurrence.tipo_discrepancia || extraDetails.tipoDiscrepancia,
+        impactoDescricao: occurrence.impacto_percebido || extraDetails.impactoDescricao,
+        descricaoSolicitacao: occurrence.descricao_solicitacao || occurrence.descricao || extraDetails.descricao
+    };
+
+    const details = extraDetails;
 
     return (
         <div className="grid gap-6">
@@ -40,7 +50,7 @@ export function MedicalReviewDetails({ occurrence }: MedicalReviewDetailsProps) 
                 <CardContent className="grid md:grid-cols-2 gap-4">
                     <div>
                         <span className="text-sm text-muted-foreground">Nome do Paciente</span>
-                        <p className="font-medium text-lg">{occurrence.paciente_nome_completo || occurrence.patient_name || details.pacienteName || "-"}</p>
+                        <p className="font-medium text-lg">{occurrence.paciente_nome_completo || occurrence.paciente_nome || occurrence.patient_name || details.pacienteName || "-"}</p>
                     </div>
                     <div>
                         <span className="text-sm text-muted-foreground">Data de Nascimento</span>
@@ -72,25 +82,25 @@ export function MedicalReviewDetails({ occurrence }: MedicalReviewDetailsProps) 
                     <div>
                         <span className="text-sm text-muted-foreground">Modalidade</span>
                         <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="outline">{details.exameModalidade || "-"}</Badge>
-                            {details.exameRegiao && <Badge variant="secondary">{details.exameRegiao}</Badge>}
+                            <Badge variant="outline">{displayData.exameModalidade || "-"}</Badge>
+                            {displayData.exameRegiao && <Badge variant="secondary">{displayData.exameRegiao}</Badge>}
                         </div>
                     </div>
                     <div>
                         <span className="text-sm text-muted-foreground">Data do Exame</span>
                         <p className="font-medium">
-                            {details.exameData
-                                ? format(new Date(details.exameData), "dd/MM/yyyy")
+                            {displayData.exameData
+                                ? format(new Date(displayData.exameData), "dd/MM/yyyy")
                                 : "-"}
                         </p>
                     </div>
                     <div>
                         <span className="text-sm text-muted-foreground">Médico Responsável (Laudo)</span>
-                        <p className="font-medium">{details.medicoResponsavel || "-"}</p>
+                        <p className="font-medium">{displayData.medicoResponsavel || "-"}</p>
                     </div>
                     <div>
                         <span className="text-sm text-muted-foreground">Laudo Entregue?</span>
-                        <p className="font-medium capitalize">{details.laudoEntregue || "-"}</p>
+                        <p className="font-medium capitalize">{displayData.laudoEntregue}</p>
                     </div>
                 </CardContent>
             </Card>
@@ -105,20 +115,27 @@ export function MedicalReviewDetails({ occurrence }: MedicalReviewDetailsProps) 
                 <CardContent className="space-y-4">
                     <div>
                         <span className="text-sm text-muted-foreground">Motivo</span>
-                        <p className="font-medium text-lg">{details.motivoRevisao || "-"}</p>
+                        <p className="font-medium text-lg">{displayData.motivoRevisao || "-"}</p>
                     </div>
 
-                    {details.tipoDiscrepancia && (
+                    {displayData.tipoDiscrepancia && (
                         <div>
                             <span className="text-sm text-muted-foreground">Discrepância / Detalhes</span>
-                            <p className="mt-1 p-3 bg-muted rounded-md text-sm">{details.tipoDiscrepancia}</p>
+                            <p className="mt-1 p-3 bg-muted rounded-md text-sm">{displayData.tipoDiscrepancia}</p>
                         </div>
                     )}
 
-                    {details.impactoDescricao && (
+                    {displayData.impactoDescricao && (
                         <div>
                             <span className="text-sm text-muted-foreground">Impacto Percebido</span>
-                            <p className="mt-1 text-sm">{details.impactoDescricao}</p>
+                            <p className="mt-1 text-sm">{displayData.impactoDescricao}</p>
+                        </div>
+                    )}
+
+                    {displayData.descricaoSolicitacao && (
+                        <div>
+                            <span className="text-sm text-muted-foreground">Descrição da Solicitação</span>
+                            <p className="mt-1 text-sm whitespace-pre-wrap">{displayData.descricaoSolicitacao}</p>
                         </div>
                     )}
                 </CardContent>

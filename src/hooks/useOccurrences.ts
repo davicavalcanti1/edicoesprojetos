@@ -76,7 +76,7 @@ export function useOccurrences() {
         id: item.id,
         protocolo: item.protocolo,
         tipo: 'enfermagem' as const,
-        subtipo: item.tipo_incidente,
+        subtipo: item.subtipo,
         status: item.status,
         descricao: item.descricao_detalhada,
         criado_em: item.criado_em,

@@ -654,7 +654,7 @@ export default function OccurrenceDetail() {
                         .map(([key, value]) => (
                           <div key={key} className="bg-secondary/10 p-3 rounded-md border border-secondary/20">
                             <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">
-                              {labelMapping[key] || key}
+                              {labelMapping[key] || key.replace(/([A-Z])/g, ' $1').trim()}
                             </p>
                             <p className="font-medium text-foreground">
                               {formatValue(key, value)}
